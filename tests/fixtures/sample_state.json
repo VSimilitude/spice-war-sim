@@ -1,0 +1,36 @@
+{
+  "alliances": [
+    {
+      "alliance_id": "RedWolves",
+      "faction": "red",
+      "power": 110,
+      "starting_spice": 2000000,
+      "daily_rate": 50000
+    },
+    {
+      "alliance_id": "RedFalcons",
+      "faction": "red",
+      "power": 85,
+      "starting_spice": 1500000,
+      "daily_rate": 40000
+    },
+    {
+      "alliance_id": "BlueLions",
+      "faction": "blue",
+      "power": 95,
+      "starting_spice": 1800000,
+      "daily_rate": 45000
+    },
+    {
+      "alliance_id": "BlueShields",
+      "faction": "blue",
+      "power": 70,
+      "starting_spice": 900000,
+      "daily_rate": 30000
+    }
+  ],
+  "event_schedule": [
+    {"attacker_faction": "red", "day": "wednesday", "days_before": 3},
+    {"attacker_faction": "blue", "day": "saturday", "days_before": 4}
+  ]
+}

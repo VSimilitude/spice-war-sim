@@ -1,0 +1,21 @@
+{
+  "random_seed": 42,
+  "battle_outcome_matrix": {
+    "wednesday": {
+      "RedWolves": {
+        "BlueLions": {"full_success": 0.9, "partial_success": 0.08}
+      },
+      "RedFalcons": {
+        "BlueShields": {"full_success": 0.7, "partial_success": 0.2}
+      }
+    },
+    "saturday": {
+      "BlueLions": {
+        "RedWolves": {"full_success": 0.5, "partial_success": 0.3}
+      },
+      "BlueShields": {
+        "RedFalcons": {"full_success": 0.3, "partial_success": 0.3}
+      }
+    }
+  }
+}
