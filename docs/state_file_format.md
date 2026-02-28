@@ -78,18 +78,18 @@ An array of event objects, one per battle event, in chronological order. A stand
 
 ### Example Event Schedule
 
-A standard 8-event war with alternating attackers:
+A standard 8-event war with alternating attackers. Each faction attacks 4 times — twice on Wednesday (easier) and twice on Saturday (harder):
 
 ```json
 [
   {"attacker_faction": "red",  "day": "wednesday", "days_before": 3},
-  {"attacker_faction": "blue", "day": "saturday",  "days_before": 3},
-  {"attacker_faction": "red",  "day": "wednesday", "days_before": 4},
-  {"attacker_faction": "blue", "day": "saturday",  "days_before": 3},
-  {"attacker_faction": "red",  "day": "wednesday", "days_before": 4},
-  {"attacker_faction": "blue", "day": "saturday",  "days_before": 3},
-  {"attacker_faction": "red",  "day": "wednesday", "days_before": 4},
-  {"attacker_faction": "blue", "day": "saturday",  "days_before": 3}
+  {"attacker_faction": "blue", "day": "saturday",  "days_before": 4},
+  {"attacker_faction": "blue", "day": "wednesday", "days_before": 3},
+  {"attacker_faction": "red",  "day": "saturday",  "days_before": 4},
+  {"attacker_faction": "blue", "day": "wednesday", "days_before": 3},
+  {"attacker_faction": "red",  "day": "saturday",  "days_before": 4},
+  {"attacker_faction": "red",  "day": "wednesday", "days_before": 3},
+  {"attacker_faction": "blue", "day": "saturday",  "days_before": 4}
 ]
 ```
 
@@ -139,7 +139,7 @@ A minimal but complete state file with 4 alliances and 2 events:
   ],
   "event_schedule": [
     {"attacker_faction": "red",  "day": "wednesday", "days_before": 3},
-    {"attacker_faction": "blue", "day": "saturday",  "days_before": 3}
+    {"attacker_faction": "blue", "day": "saturday",  "days_before": 4}
   ]
 }
 ```

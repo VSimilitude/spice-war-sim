@@ -55,8 +55,20 @@ This specification covers the mechanics for "Spice Wars" - a recurring event in 
 - **Battle Events**: Twice weekly (Wednesday and Saturday) = 8 total battle events
 - **Two Factions**: Competing against each other
 - **Attacker/Defender Roles**: Alternate between factions based on schedule
-  - Schedule is **scenario-configurable** (can vary by event/season)
-  - Example: Faction A attacks Week 1 Wed, Faction B attacks Week 1 Sat, etc.
+  - Each faction attacks **4 times** total: twice on Wednesday and twice on Saturday
+  - This ensures neither faction has a day-of-week advantage (Wednesday battles are easier for attackers than Saturday)
+  - Standard 8-event schedule (A/B = the two factions):
+
+    | Event | Attacker | Day |
+    |-------|----------|-----|
+    | 1 | A | Wednesday |
+    | 2 | B | Saturday |
+    | 3 | B | Wednesday |
+    | 4 | A | Saturday |
+    | 5 | B | Wednesday |
+    | 6 | A | Saturday |
+    | 7 | A | Wednesday |
+    | 8 | B | Saturday |
 
 ### Initial Conditions
 - **Starting spice**: Each alliance begins with a **configurable** initial spice amount
