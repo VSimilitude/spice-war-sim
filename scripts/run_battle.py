@@ -18,6 +18,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", metavar="PATH", help="Write JSON replay log to PATH")
     parser.add_argument("--seed", type=int, default=None, help="Override random seed")
     parser.add_argument("--quiet", action="store_true", help="Suppress stdout summary")
+    parser.add_argument(
+        "--alliance", action="append", dest="alliances", default=None,
+        help="Show only this alliance in output (repeatable)"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -31,22 +35,32 @@ def main(argv: list[str] | None = None) -> int:
     if args.seed is not None:
         model_config["random_seed"] = args.seed
 
+    # Derive display_aids for filtering
+    alliance_id_set = {a.alliance_id for a in alliances}
+    if args.alliances:
+        display_aids = [aid for aid in args.alliances if aid in alliance_id_set]
+        unknown = [aid for aid in args.alliances if aid not in alliance_id_set]
+        for aid in unknown:
+            print(f"Warning: unknown alliance '{aid}'", file=sys.stderr)
+    else:
+        display_aids = None
+
     seed = model_config.get("random_seed", 0)
     model = ConfigurableModel(model_config, alliances)
     result = simulate_war(alliances, schedule, model)
 
     if not args.quiet:
-        _print_summary(args, alliances, schedule, seed, result)
+        _print_summary(args, alliances, schedule, seed, result, display_aids)
 
     if args.output:
-        replay = _build_replay(alliances, schedule, seed, result)
+        replay = _build_replay(alliances, schedule, seed, result, display_aids)
         with open(args.output, "w") as f:
             json.dump(replay, f, indent=2)
 
     return 0
 
 
-def _print_summary(args, alliances, schedule, seed, result):
+def _print_summary(args, alliances, schedule, seed, result, display_aids=None):
     # Header
     print(f"State: {args.state_file}")
     if args.model_file:
@@ -56,10 +70,16 @@ def _print_summary(args, alliances, schedule, seed, result):
     print(f"Seed:  {seed}")
     print()
 
+    if display_aids is not None:
+        display_set = set(display_aids)
+        show_alliances = [a for a in alliances if a.alliance_id in display_set]
+    else:
+        show_alliances = alliances
+
     # Initial state
     name_width = max(len(a.alliance_id) for a in alliances)
     print("Initial State:")
-    for a in alliances:
+    for a in show_alliances:
         print(
             f"  {a.alliance_id:<{name_width}}  "
             f"faction={a.faction:<5} "
@@ -81,7 +101,7 @@ def _print_summary(args, alliances, schedule, seed, result):
         print(f"Event {event_num}: {attacker_faction} attacks on {day} (+{days_before} days income)")
 
         print("  Pre-battle spice:")
-        for a in alliances:
+        for a in show_alliances:
             print(f"    {a.alliance_id:<{name_width}}  {spice_before[a.alliance_id]:>12,}")
 
         # Bracket / targeting / reinforcements
@@ -142,13 +162,13 @@ def _print_summary(args, alliances, schedule, seed, result):
                     print(f"      {aid:<{name_width}}  {amount:>11,}")
 
         print("  Post-event spice:")
-        for a in alliances:
+        for a in show_alliances:
             print(f"    {a.alliance_id:<{name_width}}  {spice_after[a.alliance_id]:>12,}")
         print()
 
     # Final results
     print("Final Results:")
-    for a in alliances:
+    for a in show_alliances:
         spice = result["final_spice"][a.alliance_id]
         tier = result["rankings"][a.alliance_id]
         print(
@@ -158,7 +178,8 @@ def _print_summary(args, alliances, schedule, seed, result):
         )
 
 
-def _build_replay(alliances, schedule, seed, result):
+def _build_replay(alliances, schedule, seed, result, display_aids=None):
+    aid_set = set(display_aids) if display_aids else {a.alliance_id for a in alliances}
     return {
         "seed": seed,
         "initial_state": {
@@ -171,6 +192,7 @@ def _build_replay(alliances, schedule, seed, result):
                     "daily_rate": a.daily_spice_rate,
                 }
                 for a in alliances
+                if a.alliance_id in aid_set
             ],
             "event_schedule": [
                 {
@@ -182,8 +204,14 @@ def _build_replay(alliances, schedule, seed, result):
             ],
         },
         "events": result["event_history"],
-        "final_spice": result["final_spice"],
-        "rankings": result["rankings"],
+        "final_spice": {
+            k: v for k, v in result["final_spice"].items()
+            if k in aid_set
+        },
+        "rankings": {
+            k: v for k, v in result["rankings"].items()
+            if k in aid_set
+        },
     }
 
 

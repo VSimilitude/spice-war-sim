@@ -102,7 +102,13 @@ class ConfigurableModel(BattleModel):
             else:
                 return None, strategy
 
-        # Level 3: global strategy
+        # Level 3: faction_targeting_strategy
+        faction_strategy = self.config.get("faction_targeting_strategy", {})
+        attacker = self.alliances.get(attacker_id)
+        if attacker and attacker.faction in faction_strategy:
+            return None, faction_strategy[attacker.faction]
+
+        # Level 4: global strategy
         return None, global_strategy
 
     def _parse_override(self, entry) -> tuple[str | None, str]:
@@ -311,29 +317,43 @@ class ConfigurableModel(BattleModel):
         day: str,
     ) -> dict[str, float]:
         day_matrix = matrix.get(day, {})
+
+        # 1. Exact pairing
         attacker_entry = day_matrix.get(attacker.alliance_id, {})
         pairing = attacker_entry.get(defender.alliance_id)
-
         if pairing is not None:
-            full = pairing.get("full_success", 0.0)
-            result = {"full_success": full}
+            return self._parse_pairing(pairing)
 
-            if "partial_success" in pairing:
-                result["partial_success"] = pairing["partial_success"]
-            elif "custom" not in pairing:
-                # Legacy behavior: derive partial only when neither partial
-                # nor custom is explicitly configured
-                result["partial_success"] = (1.0 - full) * 0.4
-            else:
-                result["partial_success"] = 0.0
+        # 2. Attacker default (A → "*")
+        wildcard_pairing = attacker_entry.get("*")
+        if wildcard_pairing is not None:
+            return self._parse_pairing(wildcard_pairing)
 
-            if "custom" in pairing:
-                result["custom"] = pairing["custom"]
-                result["custom_theft_percentage"] = pairing["custom_theft_percentage"]
+        # 3. Defender default ("*" → D)
+        wildcard_attacker = day_matrix.get("*", {})
+        defender_pairing = wildcard_attacker.get(defender.alliance_id)
+        if defender_pairing is not None:
+            return self._parse_pairing(defender_pairing)
 
-            return result
-
+        # 4. Heuristic fallback
         return self._heuristic_probabilities(attacker, defender, day)
+
+    def _parse_pairing(self, pairing: dict) -> dict[str, float]:
+        full = pairing.get("full_success", 0.0)
+        result = {"full_success": full}
+
+        if "partial_success" in pairing:
+            result["partial_success"] = pairing["partial_success"]
+        elif "custom" not in pairing:
+            result["partial_success"] = (1.0 - full) * 0.4
+        else:
+            result["partial_success"] = 0.0
+
+        if "custom" in pairing:
+            result["custom"] = pairing["custom"]
+            result["custom_theft_percentage"] = pairing["custom_theft_percentage"]
+
+        return result
 
     def _heuristic_probabilities(
         self, attacker: Alliance, defender: Alliance, day: str

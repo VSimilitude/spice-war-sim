@@ -20,6 +20,7 @@ _ALLOWED_MODEL_KEYS = {
     "damage_weights",
     "targeting_strategy",
     "default_targets",
+    "faction_targeting_strategy",
 }
 
 _VALID_STRATEGIES = {"expected_value", "highest_spice"}
@@ -56,6 +57,11 @@ def load_state(path: str | Path) -> tuple[list[Alliance], list[EventConfig]]:
         if missing:
             raise ValidationError(
                 f"Alliance #{i + 1} missing required fields: {sorted(missing)}"
+            )
+        if raw["alliance_id"] == "*":
+            raise ValidationError(
+                f"Alliance #{i + 1}: '*' is reserved and cannot be used as "
+                f"an alliance_id"
             )
         alliances.append(
             Alliance(
@@ -118,6 +124,7 @@ def load_state(path: str | Path) -> tuple[list[Alliance], list[EventConfig]]:
 def load_model_config(
     path: str | Path | None,
     alliance_ids: set[str],
+    alliances: list[Alliance] | None = None,
 ) -> dict:
     if path is None:
         return {}
@@ -128,8 +135,11 @@ def load_model_config(
     if unknown:
         raise ValidationError(f"Unknown keys in model file: {sorted(unknown)}")
 
+    # Derive faction IDs if alliances provided
+    faction_ids = {a.faction for a in alliances} if alliances else None
+
     # Cross-reference alliance IDs
-    _check_model_references(data, alliance_ids)
+    _check_model_references(data, alliance_ids, faction_ids)
 
     return data
 
@@ -139,19 +149,23 @@ _ALLOWED_PAIRING_KEYS = {
 }
 
 
-def _check_model_references(data: dict, alliance_ids: set[str]) -> None:
+def _check_model_references(
+    data: dict,
+    alliance_ids: set[str],
+    faction_ids: set[str] | None = None,
+) -> None:
     errors = []
 
     # Check battle_outcome_matrix
     matrix = data.get("battle_outcome_matrix", {})
     for day, attackers in matrix.items():
         for attacker_id, defenders in attackers.items():
-            if attacker_id not in alliance_ids:
+            if attacker_id != "*" and attacker_id not in alliance_ids:
                 errors.append(
                     f"battle_outcome_matrix references unknown alliance '{attacker_id}'"
                 )
             for defender_id, pairing in defenders.items():
-                if defender_id not in alliance_ids:
+                if defender_id != "*" and defender_id not in alliance_ids:
                     errors.append(
                         f"battle_outcome_matrix references unknown alliance '{defender_id}'"
                     )
@@ -306,6 +320,46 @@ def _check_model_references(data: dict, alliance_ids: set[str]) -> None:
             errors.append(
                 f"damage_weights references unknown alliance '{aid}'"
             )
+
+    # Check faction_targeting_strategy
+    faction_strategy = data.get("faction_targeting_strategy", {})
+    for faction_name, strat in faction_strategy.items():
+        if faction_ids is not None and faction_name not in faction_ids:
+            errors.append(
+                f"faction_targeting_strategy references unknown faction "
+                f"'{faction_name}'"
+            )
+        if strat not in _VALID_STRATEGIES:
+            errors.append(
+                f"faction_targeting_strategy[{faction_name}] must be one of "
+                f"{sorted(_VALID_STRATEGIES)}, got '{strat}'"
+            )
+
+    # Check for competing wildcards in battle_outcome_matrix
+    for day, attackers in matrix.items():
+        wildcard_defender_entry = attackers.get("*", {})
+        wildcard_defender_ids = set(wildcard_defender_entry.keys())
+
+        for attacker_id, defenders in attackers.items():
+            if attacker_id == "*":
+                continue
+            if "*" not in defenders:
+                continue
+            # attacker_id has a wildcard defender default
+            # Check each defender in the "*" attacker default
+            for defender_id in wildcard_defender_ids:
+                if defender_id == "*":
+                    continue
+                # Does this attacker have an explicit entry for this defender?
+                if defender_id not in defenders:
+                    errors.append(
+                        f"battle_outcome_matrix[{day}]: competing wildcards "
+                        f"for {attacker_id} vs {defender_id} — "
+                        f"{attacker_id} has '*' default and '*' has "
+                        f"{defender_id} default. Add an explicit "
+                        f"matrix[{day}][{attacker_id}][{defender_id}] entry "
+                        f"to disambiguate."
+                    )
 
     if errors:
         raise ValidationError("\n".join(errors))

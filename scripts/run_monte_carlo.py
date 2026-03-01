@@ -17,6 +17,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-seed", type=int, default=0, help="Starting seed")
     parser.add_argument("--output", metavar="PATH", help="Write JSON results to file")
     parser.add_argument("--quiet", action="store_true", help="Suppress summary table")
+    parser.add_argument(
+        "--alliance", action="append", dest="alliances", default=None,
+        help="Show only this alliance in output (repeatable)"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -33,16 +37,30 @@ def main(argv: list[str] | None = None) -> int:
         base_seed=args.base_seed,
     )
 
+    # Derive display_aids for filtering
+    alliance_id_set = {a.alliance_id for a in alliances}
+    if args.alliances:
+        display_aids = [aid for aid in args.alliances if aid in alliance_id_set]
+        unknown = [aid for aid in args.alliances if aid not in alliance_id_set]
+        for aid in unknown:
+            print(f"Warning: unknown alliance '{aid}'", file=sys.stderr)
+    else:
+        display_aids = None
+
     if not args.quiet:
-        _print_summary(alliances, result)
+        _print_summary(alliances, result, display_aids)
 
     if args.output:
-        _write_json(args.output, result)
+        _write_json(args.output, result, display_aids)
 
     return 0
 
 
-def _print_summary(alliances: list, result: MonteCarloResult) -> None:
+def _print_summary(
+    alliances: list,
+    result: MonteCarloResult,
+    display_aids: list[str] | None = None,
+) -> None:
     n = result.num_iterations
     end_seed = result.base_seed + n - 1
     print(f"Monte Carlo Simulation — {n} iterations (seeds {result.base_seed}–{end_seed})")
@@ -54,6 +72,11 @@ def _print_summary(alliances: list, result: MonteCarloResult) -> None:
         key=lambda aid: result.spice_stats(aid)["mean"],
         reverse=True,
     )
+    if display_aids is not None:
+        display_set = set(display_aids)
+        sorted_aids = [aid for aid in sorted_aids if aid in display_set]
+    if not sorted_aids:
+        return
     name_width = max(len(aid) for aid in sorted_aids)
 
     # Tier distribution table
@@ -79,19 +102,40 @@ def _print_summary(alliances: list, result: MonteCarloResult) -> None:
         )
 
 
-def _write_json(path: str, result: MonteCarloResult) -> None:
+def _write_json(
+    path: str,
+    result: MonteCarloResult,
+    display_aids: list[str] | None = None,
+) -> None:
+    aid_set = set(display_aids) if display_aids else set(result.tier_counts)
+
     data = {
         "num_iterations": result.num_iterations,
         "base_seed": result.base_seed,
         "tier_distribution": {
             aid: {str(tier): frac for tier, frac in dist.items()}
             for aid, dist in result.rank_summary().items()
+            if aid in aid_set
         },
         "spice_stats": {
             aid: result.spice_stats(aid)
             for aid in result.tier_counts
+            if aid in aid_set
         },
-        "raw_results": result.per_iteration,
+        "raw_results": [
+            {
+                "seed": entry["seed"],
+                "final_spice": {
+                    k: v for k, v in entry["final_spice"].items()
+                    if k in aid_set
+                },
+                "rankings": {
+                    k: v for k, v in entry["rankings"].items()
+                    if k in aid_set
+                },
+            }
+            for entry in result.per_iteration
+        ],
     }
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
