@@ -18,7 +18,11 @@ _ALLOWED_MODEL_KEYS = {
     "event_targets",
     "event_reinforcements",
     "damage_weights",
+    "targeting_strategy",
+    "default_targets",
 }
+
+_VALID_STRATEGIES = {"expected_value", "highest_spice"}
 
 
 class ValidationError(Exception):
@@ -187,16 +191,101 @@ def _check_model_references(data: dict, alliance_ids: set[str]) -> None:
                         f"probabilities sum to {total}, exceeding 1.0"
                     )
 
+    # Check targeting_strategy
+    strategy = data.get("targeting_strategy")
+    if strategy is not None and strategy not in _VALID_STRATEGIES:
+        errors.append(
+            f"targeting_strategy must be one of {sorted(_VALID_STRATEGIES)}, "
+            f"got '{strategy}'"
+        )
+
+    # Check default_targets
+    for alliance_id, override in data.get("default_targets", {}).items():
+        if alliance_id not in alliance_ids:
+            errors.append(
+                f"default_targets references unknown alliance '{alliance_id}'"
+            )
+        if not isinstance(override, dict):
+            errors.append(
+                f"default_targets[{alliance_id}] must be a dict, "
+                f"got {type(override).__name__}"
+            )
+            continue
+        if "target" in override:
+            if len(override) != 1:
+                errors.append(
+                    f"default_targets[{alliance_id}] has 'target' with extra keys: "
+                    f"{sorted(set(override.keys()) - {'target'})}"
+                )
+            if override["target"] not in alliance_ids:
+                errors.append(
+                    f"default_targets[{alliance_id}] references unknown "
+                    f"target '{override['target']}'"
+                )
+        elif "strategy" in override:
+            if len(override) != 1:
+                errors.append(
+                    f"default_targets[{alliance_id}] has 'strategy' with extra keys: "
+                    f"{sorted(set(override.keys()) - {'strategy'})}"
+                )
+            if override["strategy"] not in _VALID_STRATEGIES:
+                errors.append(
+                    f"default_targets[{alliance_id}] strategy must be one of "
+                    f"{sorted(_VALID_STRATEGIES)}, got '{override['strategy']}'"
+                )
+        else:
+            errors.append(
+                f"default_targets[{alliance_id}] must have exactly one key: "
+                f"'target' or 'strategy'"
+            )
+
     # Check event_targets
     for event_num, targets in data.get("event_targets", {}).items():
-        for attacker_id, defender_id in targets.items():
+        for attacker_id, value in targets.items():
             if attacker_id not in alliance_ids:
                 errors.append(
                     f"event_targets references unknown alliance '{attacker_id}'"
                 )
-            if defender_id not in alliance_ids:
+            if isinstance(value, str):
+                if value not in alliance_ids:
+                    errors.append(
+                        f"event_targets references unknown alliance '{value}'"
+                    )
+            elif isinstance(value, dict):
+                if "target" in value:
+                    if len(value) != 1:
+                        errors.append(
+                            f"event_targets[{event_num}][{attacker_id}] has "
+                            f"'target' with extra keys: "
+                            f"{sorted(set(value.keys()) - {'target'})}"
+                        )
+                    if value["target"] not in alliance_ids:
+                        errors.append(
+                            f"event_targets[{event_num}][{attacker_id}] references "
+                            f"unknown target '{value['target']}'"
+                        )
+                elif "strategy" in value:
+                    if len(value) != 1:
+                        errors.append(
+                            f"event_targets[{event_num}][{attacker_id}] has "
+                            f"'strategy' with extra keys: "
+                            f"{sorted(set(value.keys()) - {'strategy'})}"
+                        )
+                    if value["strategy"] not in _VALID_STRATEGIES:
+                        errors.append(
+                            f"event_targets[{event_num}][{attacker_id}] strategy "
+                            f"must be one of {sorted(_VALID_STRATEGIES)}, "
+                            f"got '{value['strategy']}'"
+                        )
+                else:
+                    errors.append(
+                        f"event_targets[{event_num}][{attacker_id}] must be a "
+                        f"string or dict with 'target' or 'strategy'"
+                    )
+            else:
                 errors.append(
-                    f"event_targets references unknown alliance '{defender_id}'"
+                    f"event_targets[{event_num}][{attacker_id}] must be a "
+                    f"string or dict, got {type(value).__name__}"
                 )
 
     # Check event_reinforcements

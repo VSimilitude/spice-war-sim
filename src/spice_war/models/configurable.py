@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 from collections import Counter
 
+from spice_war.game.mechanics import calculate_building_count, calculate_theft_percentage
 from spice_war.models.base import BattleModel
 from spice_war.utils.data_structures import Alliance, GameState
 
@@ -23,41 +24,154 @@ class ConfigurableModel(BattleModel):
         bracket_defenders: list[Alliance],
         bracket_number: int,
     ) -> dict[str, str]:
-        event_targets = self.config.get("event_targets", {})
+        event_targets_config = self.config.get("event_targets", {})
+        default_targets_config = self.config.get("default_targets", {})
+        global_strategy = self.config.get("targeting_strategy", "expected_value")
+
         event_key = str(state.event_number)
+        event_overrides = event_targets_config.get(event_key, {})
 
-        if event_key in event_targets:
-            configured = event_targets[event_key]
-            attacker_ids = {a.alliance_id for a in bracket_attackers}
-            filtered = {k: v for k, v in configured.items() if k in attacker_ids}
-            if filtered:
-                return filtered
+        defender_ids = {d.alliance_id for d in bracket_defenders}
 
-        return self._default_targets(bracket_attackers, bracket_defenders, state)
+        # Phase 1: Resolve pinned targets
+        pins: dict[str, str] = {}
+        algo_attackers: list[tuple[Alliance, str]] = []
 
-    def _default_targets(
-        self,
-        bracket_attackers: list[Alliance],
-        bracket_defenders: list[Alliance],
-        state: GameState,
-    ) -> dict[str, str]:
-        attackers = sorted(bracket_attackers, key=lambda a: a.power, reverse=True)
-        defenders = sorted(
-            bracket_defenders,
-            key=lambda d: state.current_spice[d.alliance_id],
-            reverse=True,
-        )
+        for attacker in bracket_attackers:
+            aid = attacker.alliance_id
+            resolved_target, resolved_strategy = self._resolve_attacker(
+                aid, event_overrides, default_targets_config, global_strategy,
+                defender_ids,
+            )
+            if resolved_target is not None:
+                pins[aid] = resolved_target
+            else:
+                algo_attackers.append((attacker, resolved_strategy))
 
-        targets: dict[str, str] = {}
-        assigned: set[str] = set()
-        for attacker in attackers:
-            for defender in defenders:
-                if defender.alliance_id not in assigned:
-                    targets[attacker.alliance_id] = defender.alliance_id
-                    assigned.add(defender.alliance_id)
-                    break
+        # Phase 2: Run algorithms for non-pinned attackers
+        targets = dict(pins)
+        algo_attackers.sort(key=lambda pair: pair[0].power, reverse=True)
+        assigned: set[str] = set(pins.values())
+
+        for attacker, strategy in algo_attackers:
+            available = [
+                d for d in bracket_defenders
+                if d.alliance_id not in assigned
+            ]
+            if not available:
+                break
+
+            if strategy == "expected_value":
+                best = self._pick_esv_target(attacker, available, state)
+            else:
+                best = self._pick_highest_spice_target(available, state)
+
+            targets[attacker.alliance_id] = best.alliance_id
+            assigned.add(best.alliance_id)
 
         return targets
+
+    def _resolve_attacker(
+        self,
+        attacker_id: str,
+        event_overrides: dict,
+        default_targets_config: dict,
+        global_strategy: str,
+        defender_ids: set[str],
+    ) -> tuple[str | None, str]:
+        """Returns (pinned_target_or_None, strategy)."""
+        # Level 1: event_targets override
+        if attacker_id in event_overrides:
+            entry = event_overrides[attacker_id]
+            target, strategy = self._parse_override(entry)
+            if target is not None:
+                if target in defender_ids:
+                    return target, ""
+                # Pin invalid for this bracket — fall through to level 2
+            else:
+                return None, strategy
+
+        # Level 2: default_targets
+        if attacker_id in default_targets_config:
+            entry = default_targets_config[attacker_id]
+            target, strategy = self._parse_override(entry)
+            if target is not None:
+                if target in defender_ids:
+                    return target, ""
+                # Pin invalid for this bracket — fall through to level 3
+            else:
+                return None, strategy
+
+        # Level 3: global strategy
+        return None, global_strategy
+
+    def _parse_override(self, entry) -> tuple[str | None, str]:
+        """Parse an override entry (string or dict) into (target, strategy)."""
+        if isinstance(entry, str):
+            return entry, ""
+        if "target" in entry:
+            return entry["target"], ""
+        return None, entry["strategy"]
+
+    def _calculate_esv(
+        self,
+        attacker: Alliance,
+        defender: Alliance,
+        state: GameState,
+    ) -> float:
+        matrix = self.config.get("battle_outcome_matrix", {})
+        probs = self._lookup_or_heuristic(matrix, attacker, defender, state.day)
+
+        defender_spice = state.current_spice[defender.alliance_id]
+        building_count = calculate_building_count(defender_spice)
+
+        esv = 0.0
+
+        full_prob = probs.get("full_success", 0.0)
+        if full_prob > 0:
+            theft_pct = calculate_theft_percentage("full_success", building_count)
+            esv += full_prob * (defender_spice * theft_pct / 100.0)
+
+        partial_prob = probs.get("partial_success", 0.0)
+        if partial_prob > 0:
+            theft_pct = calculate_theft_percentage("partial_success", building_count)
+            esv += partial_prob * (defender_spice * theft_pct / 100.0)
+
+        custom_prob = probs.get("custom", 0.0)
+        if custom_prob > 0:
+            custom_theft_pct = probs.get("custom_theft_percentage", 0.0)
+            esv += custom_prob * (defender_spice * custom_theft_pct / 100.0)
+
+        return esv
+
+    def _pick_esv_target(
+        self,
+        attacker: Alliance,
+        available: list[Alliance],
+        state: GameState,
+    ) -> Alliance:
+        available_with_esv = [
+            (self._calculate_esv(attacker, d, state), d)
+            for d in available
+        ]
+        available_with_esv.sort(
+            key=lambda pair: (
+                -pair[0],
+                -state.current_spice[pair[1].alliance_id],
+                pair[1].alliance_id,
+            )
+        )
+        return available_with_esv[0][1]
+
+    def _pick_highest_spice_target(
+        self,
+        available: list[Alliance],
+        state: GameState,
+    ) -> Alliance:
+        return max(
+            available,
+            key=lambda d: state.current_spice[d.alliance_id],
+        )
 
     # ── M2: Reinforcements ─────────────────────────────────────────
 
