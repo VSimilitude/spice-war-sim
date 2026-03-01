@@ -1,0 +1,7 @@
+{
+  "random_seed": 42,
+  "event_targets": {
+    "1": {"RAG3": "Hot"},
+    "2": {"Hot": "RAG3"}
+  }
+}
