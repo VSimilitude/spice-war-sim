@@ -25,7 +25,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const defaultState = PyBridge.getDefaultState();
     document.getElementById("state-textarea").value = JSON.stringify(defaultState, null, 2);
-    document.getElementById("model-textarea").value = "{}";
+    const defaultModel = PyBridge.getDefaultModelConfig();
+    document.getElementById("model-textarea").value = JSON.stringify(defaultModel, null, 2);
 
     validateState();
     validateModel();
