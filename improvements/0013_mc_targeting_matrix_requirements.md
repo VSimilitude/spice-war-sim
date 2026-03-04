@@ -26,6 +26,7 @@ targeting matrix for each event.
 - One matrix per event
 - Header shows event number, attacking faction, and day
 - Attackers down the left side (rows), defenders across the top (columns)
+- Both rows and columns sorted by alliance power (descending)
 - Each cell shows the percentage of iterations with that pairing
 
 ### 2b. Respect --alliance filter
@@ -65,8 +66,8 @@ charts), render a targeting matrix table for each event.
 
 Each table should have:
 - A heading: "Event N — [Faction] attacks ([day])"
-- Defenders as column headers
-- Attackers as row labels
+- Defenders as column headers, sorted by power descending
+- Attackers as row labels, sorted by power descending
 - Cells showing percentage values
 
 ### 4b. Apply existing alliance filter
