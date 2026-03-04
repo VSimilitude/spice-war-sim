@@ -18,7 +18,7 @@ let lastResult = null;
 let tierChartInstance = null;
 let spiceChartInstance = null;
 let formHandlersAttached = false;
-let resultFilter = "all";
+let resultFilter = "top10";
 
 // --- Initialization ---
 
@@ -129,7 +129,7 @@ function onStateInput() {
 // --- State Summary ---
 
 function renderStateSummary(container, result) {
-    let html = "<h3>Alliances</h3><table><tr>";
+    let html = "<details><summary><h3>Alliances</h3></summary><table><tr>";
     html += "<th>ID</th><th>Faction</th><th>Power</th><th>Starting Spice</th><th>Daily Rate</th>";
     html += "</tr>";
     for (const a of result.alliances) {
@@ -141,9 +141,9 @@ function renderStateSummary(container, result) {
             <td>${a.daily_rate.toLocaleString()}</td>
         </tr>`;
     }
-    html += "</table>";
+    html += "</table></details>";
 
-    html += "<h3>Event Schedule</h3><table><tr>";
+    html += "<details open><summary><h3>Event Schedule</h3></summary><table><tr>";
     html += "<th>#</th><th>Attacker</th><th>Day</th><th>Days Before</th>";
     html += "</tr>";
     for (const e of result.event_schedule) {
@@ -154,7 +154,7 @@ function renderStateSummary(container, result) {
             <td>${e.days_before}</td>
         </tr>`;
     }
-    html += "</table>";
+    html += "</table></details>";
 
     container.innerHTML = html;
     container.classList.remove("hidden");
