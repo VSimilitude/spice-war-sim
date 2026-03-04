@@ -2,10 +2,10 @@
 
 ## Goal
 
-Add two new sources of randomness to Monte Carlo simulations — **stochastic
-targeting** and **per-event power fluctuation** — controlled by optional model
-config fields. Both features use the existing seeded RNG so results remain
-fully deterministic for a given seed.
+Add three new sources of randomness to Monte Carlo simulations — **stochastic
+targeting**, **per-event power fluctuation**, and **outcome probability
+noise** — controlled by optional model config fields. All features use the
+existing seeded RNG so results remain fully deterministic for a given seed.
 
 ## Motivation
 
@@ -15,8 +15,8 @@ deterministic functions of game state. This means MC runs with different seeds
 only explore different outcome-roll paths while strategy and context stay
 fixed.
 
-Adding randomness to targeting and power lets MC simulations explore a much
-wider space of plausible scenarios:
+Adding randomness to targeting, power, and outcome probabilities lets MC
+simulations explore a much wider space of plausible scenarios:
 
 - **Stochastic targeting** models the uncertainty in which alliance attacks
   which defender. In practice, attackers don't always pick the
@@ -24,6 +24,10 @@ wider space of plausible scenarios:
 - **Power fluctuation** models variance in alliance strength from event to
   event — morale, readiness, coordination quality. This ripples through
   heuristic battle probabilities and damage splits.
+- **Outcome probability noise** models uncertainty in the predicted battle
+  probabilities themselves — whether configured via the matrix or derived
+  from heuristics. A 40% full success chance might really be anywhere from
+  35% to 45%.
 
 ---
 
@@ -148,15 +152,73 @@ percentage, bracket assignment, reinforcement logic.
 
 ---
 
-## 3. Determinism
+## 3. Outcome Probability Noise
 
-Both features use the existing seeded RNG. When set to 0 (default), neither
-feature consumes any RNG calls, preserving the existing call sequence and
-full backward compatibility. Results are fully deterministic for a given seed.
+### 3.1 Config
+
+A new optional field `outcome_noise` controls random perturbation of battle
+outcome probabilities on a per-pairing basis:
+
+```json
+{
+  "outcome_noise": 0.05
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `outcome_noise` | float >= 0 | `0.0` | Maximum absolute deviation applied to each outcome probability per pairing. 0 = no perturbation (current behavior). |
+
+### 3.2 Behavioral Rules
+
+- Each attacker-defender pairing gets its own set of perturbation offsets:
+  $\delta_i \sim \text{Uniform}(-noise, +noise)$ for `full_success`,
+  `partial_success`, and `custom`.
+- A given pairing's offsets are **constant for the entire simulation** —
+  if the same attacker fights the same defender in multiple events, the
+  same offsets apply each time. Different seeds produce different offsets.
+- When computing battle outcome probabilities (from any source — matrix,
+  heuristic, or multi-attacker averaging), apply the pairing's offsets:
+  $p'_i = p_i + \delta_i$
+- Clamp each perturbed probability to $[0, 1]$.
+- Recompute `fail` as $\max(0, 1 - \sum p'_i)$. If the perturbed non-fail
+  probabilities sum to more than 1, normalize them proportionally to sum to
+  1 and set `fail` to 0.
+- **Applies to all probability sources** — matrix-configured, heuristic, and
+  multi-attacker averaged probabilities are all perturbed. This is the key
+  difference from `power_noise`, which only affects heuristic-derived
+  probabilities.
+- **outcome_noise 0** (default): No perturbation. Current behavior. Full
+  backward compatibility.
+
+### 3.3 Edge Cases
+
+- **Probability already at 0 or 1**: Perturbation can shift it away from the
+  boundary (e.g., 0 + 0.03 = 0.03), but clamping prevents negative values.
+- **Large noise value**: With `outcome_noise: 0.5`, probabilities can shift
+  dramatically. Allowed but expected to be used with small values (0.02–0.10).
+- **Custom outcome**: If present in a pairing, `custom` probability is
+  perturbed independently. The `custom_theft_percentage` is not perturbed.
+  Pairings without a custom outcome are unaffected by any custom offset.
+- **Multi-attacker battles**: When multiple attackers target the same
+  defender, each attacker's per-pairing offsets are applied to their
+  individual probabilities first, then the perturbed probabilities are
+  averaged. Clamping and normalization happen after averaging.
+- **Interaction with power_noise**: Both can be active simultaneously.
+  `power_noise` changes the heuristic-derived base probabilities per event,
+  then `outcome_noise` applies the pairing's fixed offsets on top.
 
 ---
 
-## 4. Tests
+## 4. Determinism
+
+All three features use the existing seeded RNG. When set to 0 (default), none
+consume any RNG calls, preserving the existing call sequence and full backward
+compatibility. Results are fully deterministic for a given seed.
+
+---
+
+## 5. Tests
 
 ### Stochastic Targeting
 
@@ -188,22 +250,40 @@ full backward compatibility. Results are fully deterministic for a given seed.
 | 19 | **Damage splits use effective power** | Heuristic damage splits reflect fluctuated power, not base power |
 | 20 | **Heuristic probabilities use effective power** | Power ratio in heuristic formula uses effective power values |
 
+### Outcome Probability Noise
+
+| # | Test | Validates |
+|---|------|-----------|
+| 21 | **outcome_noise 0 matches current behavior** | With `outcome_noise: 0`, all results identical to existing behavior |
+| 22 | **outcome_noise produces varied outcomes** | Same scenario with different seeds and `outcome_noise: 0.05` produces different battle outcomes |
+| 23 | **Per-pairing offsets are independent** | Two different attacker-defender pairings get different perturbation offsets |
+| 24 | **Same pairing consistent across events** | If the same attacker fights the same defender in two events, the same offsets apply both times |
+| 25 | **Different seeds produce different offsets** | Two simulations with different seeds get different offsets for the same pairing |
+| 26 | **Perturbed probabilities stay valid** | After perturbation, all probabilities are >= 0 and sum to <= 1 (plus fail) |
+| 27 | **Applies to matrix-configured probabilities** | Explicit matrix entries are perturbed, unlike power_noise |
+| 28 | **Applies to heuristic probabilities** | Heuristic-derived probabilities are also perturbed |
+| 29 | **Custom outcome perturbed** | Custom probability is perturbed; custom_theft_percentage is not |
+| 30 | **Normalization when sum exceeds 1** | Large noise that pushes total above 1 results in proportional normalization and fail = 0 |
+| 31 | **Deterministic with seed** | Same seed + same noise → identical offsets and results |
+| 32 | **Interaction with power_noise** | Both active — power_noise changes base heuristic per event, outcome_noise applies pairing's fixed offsets on top |
+
 ### Combined
 
 | # | Test | Validates |
 |---|------|-----------|
-| 21 | **Both features together** | `targeting_temperature: 0.5` + `power_noise: 0.1` — simulation runs without error and produces varied results across seeds |
-| 22 | **Neither feature (backward compat)** | Config with neither field produces identical results to current code |
-| 23 | **Full MC sweep** | Running N simulations with both features produces a distribution of final rankings, not identical results |
+| 33 | **All three features together** | `targeting_temperature: 0.5` + `power_noise: 0.1` + `outcome_noise: 0.05` — simulation runs without error and produces varied results across seeds |
+| 34 | **No features (backward compat)** | Config with no noise/temperature fields produces identical results to current code |
+| 35 | **Full MC sweep** | Running N simulations with all features produces a distribution of final rankings, not identical results |
 
 ---
 
-## 5. Non-Goals
+## 6. Non-Goals
 
 - **Per-alliance temperature or noise** — a single global value for each
   parameter is sufficient. Per-alliance tuning can be added later if needed.
 - **Noise on other parameters** — daily spice rate noise, theft percentage
-  jitter, and reinforcement randomization are out of scope for this change.
+  jitter, reinforcement randomization, and custom_theft_percentage noise are
+  out of scope for this change.
 - **New targeting strategies** — this enhances existing strategies with
   randomness, not adding new strategy types.
 - **Changes to the `BattleModel` interface** — all changes are internal to
