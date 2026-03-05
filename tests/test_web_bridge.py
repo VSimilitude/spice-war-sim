@@ -49,8 +49,8 @@ def valid_state():
 def test_get_default_state_is_valid(default_state):
     result = validate_state(default_state)
     assert result["ok"] is True
-    assert len(result["alliances"]) == 40
-    assert len(result["event_schedule"]) == 4
+    assert len(result["alliances"]) == 49
+    assert len(result["event_schedule"]) == 3
 
 
 # --- get_default_model_config ---
@@ -157,7 +157,7 @@ def test_run_single_structure(default_state):
     assert "final_spice" in result
     assert "rankings" in result
     assert "event_history" in result
-    assert len(result["event_history"]) == 4
+    assert len(result["event_history"]) == 3
     for aid in ["VON", "UTW", "Ghst", "SPXP"]:
         assert aid in result["final_spice"]
         assert aid in result["rankings"]
