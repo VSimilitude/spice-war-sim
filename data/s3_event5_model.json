@@ -1,0 +1,51 @@
+{
+  "random_seed": 42,
+  "event_targets": {
+    "1": {
+      "VON":  "Ghst",
+      "UTW":  "Hot",
+      "RAG3": "KORK",
+      "TWAO": "SPXP",
+      "DEED": "sWAT",
+      "PPLE": "STrH",
+      "hAnA": "1CES",
+      "GDZO": "j0y",
+      "BdE":  "BGs",
+      "USA5": "VNSA",
+      "SPir": "HOpE",
+      "hvm6": "LoFi",
+      "ZFKs": "ICG0",
+      "KAG3": "MY81",
+      "AR35": "SPXR",
+      "HULK": "fabl",
+      "VNFs": "LE01",
+      "Bo5S": "DNEX",
+      "DMUW": "NexA",
+      "LATZ": "fate"
+    }
+  },
+  "battle_outcome_matrix": {
+    "wednesday": {
+      "VON":  {"Ghst": {"full_success": 0.0, "partial_success": 1.0}},
+      "UTW":  {"Hot":  {"full_success": 1.0}},
+      "RAG3": {"KORK": {"full_success": 1.0}},
+      "TWAO": {"SPXP": {"full_success": 1.0}},
+      "DEED": {"sWAT": {"full_success": 1.0}},
+      "PPLE": {"STrH": {"full_success": 1.0}},
+      "hAnA": {"1CES": {"full_success": 1.0}},
+      "GDZO": {"j0y":  {"full_success": 0.0, "partial_success": 0.0}},
+      "BdE":  {"BGs":  {"full_success": 0.0, "partial_success": 0.0}},
+      "USA5": {"VNSA": {"full_success": 0.0, "partial_success": 0.0}},
+      "SPir": {"HOpE": {"full_success": 1.0}},
+      "hvm6": {"LoFi": {"full_success": 1.0}},
+      "ZFKs": {"ICG0": {"full_success": 0.0, "partial_success": 0.0, "custom": 1.0, "custom_theft_percentage": 25}},
+      "KAG3": {"MY81": {"full_success": 0.0, "partial_success": 1.0}},
+      "AR35": {"SPXR": {"full_success": 0.0, "partial_success": 1.0}},
+      "HULK": {"fabl": {"full_success": 0.0, "partial_success": 0.0}},
+      "VNFs": {"LE01": {"full_success": 0.0, "partial_success": 0.0}},
+      "Bo5S": {"DNEX": {"full_success": 0.0, "partial_success": 0.0}},
+      "DMUW": {"NexA": {"full_success": 0.0, "partial_success": 0.0}},
+      "LATZ": {"fate": {"full_success": 0.0, "partial_success": 0.0}}
+    }
+  }
+}
