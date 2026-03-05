@@ -370,3 +370,62 @@ Steps 1-2 are pure Python, fully testable without a browser. Steps 3-9 are the w
 **In scope:** Everything listed in sections 1-6 of the requirements doc.
 
 **Out of scope (per requirements):** Server-side execution, user accounts, Google Sheets direct fetch, real-time collaboration, mobile optimization, automated browser tests, build toolchain.
+
+---
+
+## Post-Launch Enhancements (0010–0016)
+
+The following features were added after the initial web interface launch:
+
+### Form-Based Model Editor (0010)
+
+Replaced the raw JSON textarea with structured accordion sections:
+- **General Settings**: seed, targeting strategy, targeting temperature, power noise, outcome noise
+- **Faction Targeting Strategy**: per-faction strategy dropdowns
+- **Default Targets**: dynamic add/remove rows with alliance dropdowns
+- **Event Targets**: per-event sub-sections with attacker/defender selectors
+- **Event Reinforcements**: per-event assignment rows
+- **Battle Outcome Matrix**: grouped by day, percentage inputs, inline probability sum validation, heuristic placeholder hints
+- **Damage Weights**: per-alliance weight inputs
+
+A "Edit as JSON" / "Back to form" toggle provides bi-directional sync between form and JSON textarea. Alliance dropdowns auto-populate from validated state data.
+
+The game state JSON editor is wrapped in a collapsible `<details>` element (collapsed by default), with summary tables always visible.
+
+### Validation & UX Fixes (0011)
+
+- Inline error messages on outcome matrix rows (type errors, range, probability sums)
+- Heuristic probability placeholder hints computed from power ratios
+- Duplicate alliance detection in targeting sections
+- Guard flag prevents duplicate event listener stacking on form rebuilds
+
+### Enhanced Results Tables (0011–0012)
+
+- **Final Rankings**: Faction, Alliance, Rank, Tier, Final Spice columns
+- **Spice Before/After**: Before/After Rank with colored rank-change arrows (green up, red down, grey dash)
+- **Targeting**: Bracket, Attacker, Attacker Rank, Defender, Defender Rank columns
+- Battle filter shows complete battles when any participant matches the filter
+
+### Results Filter (0011, 0016)
+
+Filter bar with "All", "Top 3", "Top 5", "Top 10 per faction" buttons. Filters all results tables and charts by top-N alliances per faction by power. Default changed to "Top 10" in 0016.
+
+### Shareable URLs (0011)
+
+Compressed configuration (state + model + run params) encoded into URL hash fragment using `CompressionStream("deflate")` + base64url. "Copy Share Link" button with toast notification. Auto-loads from URL hash on page open.
+
+### MC Targeting Matrix (0013)
+
+Per-event attacker/defender targeting frequency matrix displayed after Monte Carlo charts. Shows how often each attacker targeted each defender across all iterations, as a fraction. Respects the alliance filter.
+
+### MC Randomness Controls (0015)
+
+Three number inputs in General Settings: Targeting Temperature, Power Noise, Outcome Noise. Values of 0 or empty are omitted from the model config JSON.
+
+### Collapsible Game State Sections (0016)
+
+Alliances and Event Schedule summary tables wrapped in `<details>` elements. Alliances collapsed by default, Event Schedule expanded by default.
+
+### Dynamic Default Model Config (0012)
+
+`get_default_model_config()` accepts the state dict and generates a minimal model config with cross-faction matchup rows (top alliance per faction), so heuristic probability placeholder hints display immediately.

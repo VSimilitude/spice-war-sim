@@ -51,12 +51,13 @@ These implement core game rules. They contain NO model logic, but they DO call m
 ### 2. Theft Percentage Mapper
 **Purpose**: Convert outcome level to actual theft percentage
 
-**Input**: `outcome_level`, `building_count`
+**Input**: `outcome_level`, `building_count`, optional `custom_theft_percentage`
 **Output**: `theft_percentage` (0-30)
 
 **Logic**:
 - full_success: (building_count × 5%) + 10% (center)
 - partial_success: (building_count × 5%)
+- custom: uses `custom_theft_percentage` directly (0-100%, bypasses building formula)
 - fail: 0%
 
 ### 3. Bracket Assigner
@@ -192,18 +193,17 @@ Each alliance requires:
   "alliance_id": "alliance_A",
   "name": "Alliance Alpha",
   "server": "server_1",
-  "faction": 1,
+  "faction": "red",
   "power": 1000000,
   "gift_level": 50000,
   "starting_spice": 200000,
-  "daily_spice_rate": 50000,
-  "damage_weight": 1.0
+  "daily_spice_rate": 50000
 }
 ```
 
 **Required fields (used by game mechanics):**
 - `alliance_id` (string): Unique identifier
-- `faction` (1 or 2): Which faction the alliance belongs to
+- `faction` (string): Which faction the alliance belongs to (e.g. `"red"`, `"blue"`)
 - `starting_spice` (number): Initial spice at event start
 - `daily_spice_rate` (number): Passive spice generation per day
 
@@ -212,28 +212,26 @@ Each alliance requires:
 - `server` (string): Server identifier
 - `power` (number): Alliance strength
 - `gift_level` (number): Spending indicator
-- `damage_weight` (number): Relative damage contribution weight
+
+> **Note:** `damage_weight` is configured in the model config's `damage_weights` dict, not on the alliance. See [model_generation.md](model_generation.md).
 
 ### Event Schedule
 
 Defines which faction attacks on each of the 8 battle events:
 
 ```json
-{
-  "events": [
-    {"event_id": 1, "day": "wednesday", "week": 1, "attacker_faction": 1},
-    {"event_id": 2, "day": "saturday", "week": 1, "attacker_faction": 2}
-  ]
-}
+[
+  {"attacker_faction": "red",  "day": "wednesday", "days_before": 3},
+  {"attacker_faction": "blue", "day": "saturday",  "days_before": 4}
+]
 ```
 
 **Required fields per event:**
-- `event_id` (number): 1-8
-- `attacker_faction` (1 or 2): Which faction attacks
+- `attacker_faction` (string): Which faction attacks (must match a faction in `alliances`)
+- `day` (string): `"wednesday"` or `"saturday"`
+- `days_before` (integer): Days of passive spice accumulation before this event
 
-**Optional fields:**
-- `day` (string): "wednesday" or "saturday"
-- `week` (number): 1-4
+See [state_file_format.md](state_file_format.md) for the full input format specification.
 
 ### Game State (Passed to Model)
 
@@ -268,7 +266,14 @@ config = {
     "battle_outcome_matrix": { ... },       # See M3 below
     "event_targets": { ... },               # See M1 below
     "event_reinforcements": { ... },        # See M2 below
-    "random_seed": 42                       # For reproducible outcomes
+    "random_seed": 42,                      # For reproducible outcomes
+    "targeting_strategy": "expected_value",  # Global targeting algorithm
+    "default_targets": { ... },             # Per-alliance default targets
+    "faction_targeting_strategy": { ... },  # Per-faction strategy overrides
+    "damage_weights": { ... },              # Damage contribution weights
+    "targeting_temperature": 0.0,           # MC stochastic targeting
+    "power_noise": 0.0,                     # MC power fluctuation
+    "outcome_noise": 0.0                    # MC outcome probability noise
 }
 
 model = ConfigurableModel(config, alliances)
@@ -276,11 +281,16 @@ simulator = WarSimulator(alliances, event_schedule, model)
 ```
 
 **Config sources:**
-- `battle_outcome_matrix`: User provides probabilities for attacker-defender pairings
-- `event_targets`: User provides explicit targeting for specific events (optional)
-- `event_reinforcements`: User provides explicit reinforcements for specific events (optional)
+- `battle_outcome_matrix`: Probabilities per attacker-defender pairing. Supports `"*"` wildcards.
+- `event_targets`: Explicit targeting for specific events (optional)
+- `event_reinforcements`: Explicit reinforcements for specific events (optional)
+- `default_targets`: Per-alliance default target or strategy (optional)
+- `faction_targeting_strategy`: Per-faction targeting strategy override (optional)
+- `targeting_strategy`: Global targeting algorithm — `"expected_value"` (default) or `"highest_spice"`
+- `damage_weights`: Per-alliance damage contribution weights (optional)
 - `random_seed`: Controls randomness in outcome rolling
-- `alliances`: Alliance data including `power`, `gift_level`, `damage_weight` (used for fallback heuristics)
+- `targeting_temperature`, `power_noise`, `outcome_noise`: Monte Carlo randomness controls (default 0)
+- `alliances`: Alliance data including `power`, `gift_level` (used for fallback heuristics)
 
 ### M1. Targeting Generator
 
@@ -294,20 +304,22 @@ simulator = WarSimulator(alliances, event_schedule, model)
 
 **Has from construction:**
 - `config.event_targets`: User-configured targets per event (optional)
+- `config.default_targets`: Per-alliance default target or strategy (optional)
+- `config.faction_targeting_strategy`: Per-faction strategy override (optional)
+- `config.targeting_strategy`: Global strategy — `"expected_value"` (default) or `"highest_spice"`
 
 **Returns:**
 - `targets` (dict): attacker_id → defender_id
 
-**Logic:**
-1. Check if `config.event_targets[current_event_number]` exists for this bracket
-   - If yes: use user-configured targets (filtered to this bracket)
-   - If no: apply default power-based targeting rule
-2. **Default rule (1:1, spice-based)**:
-   a. Sort bracket_attackers by power (descending)
-   b. Sort bracket_defenders by current spice (descending)
-   c. For each attacker (highest power first):
-      - Target highest-spice defender with no attackers yet assigned
-3. Return targets dict
+**Logic — 4-level targeting resolution per attacker:**
+1. **`event_targets`**: Check `config.event_targets[event_number][attacker_id]` — per-event explicit pin
+2. **`default_targets`**: Check `config.default_targets[attacker_id]` — per-alliance default (target string or `{"strategy": "..."}`)
+3. **`faction_targeting_strategy`**: Check `config.faction_targeting_strategy[attacker_faction]` — per-faction algorithm
+4. **`targeting_strategy`**: Fall back to global algorithm (default: `"expected_value"`)
+
+**Targeting algorithms:**
+- **`"expected_value"`** (default): Maximizes Expected Spice Value (ESV) = sum of (probability × theft_amount) for each defender. Attackers choose in descending power order; ties broken by higher spice then alphabetical ID.
+- **`"highest_spice"`**: Original heuristic — 1:1 assignment to highest-spice unassigned defender, attackers sorted by power descending.
 
 **User config format for event_targets:**
 ```json
@@ -315,19 +327,22 @@ simulator = WarSimulator(alliances, event_schedule, model)
   "event_targets": {
     "1": {
       "alliance_A": "alliance_X",
-      "alliance_B": "alliance_X",
-      "alliance_C": "alliance_Y"
-    },
-    "5": {
-      "alliance_A": "alliance_Z"
+      "alliance_B": {"strategy": "highest_spice"}
     }
-  }
+  },
+  "default_targets": {
+    "alliance_C": "alliance_Y"
+  },
+  "faction_targeting_strategy": {
+    "red": "highest_spice"
+  },
+  "targeting_strategy": "expected_value"
 }
 ```
 
 **Notes:**
-- Config is optional per event - unconfigured events use default rule
-- Config can be partial within an event - unconfigured attackers in a configured event could use default rule (or require all-or-nothing - decision TBD)
+- Config is optional at every level — unconfigured attackers cascade to the next level
+- Override values can be a target string (pin to defender) or `{"strategy": "algorithm_name"}` or `{"target": "defender_id"}`
 
 ### M2. Reinforcement Generator
 
@@ -384,13 +399,16 @@ simulator = WarSimulator(alliances, event_schedule, model)
 - `alliances`: Alliance power/gift_level data (for fallback heuristic)
 
 **Returns:**
-- `outcome_level` (string): "full_success", "partial_success", or "fail"
+- `outcome_level` (string): `"full_success"`, `"partial_success"`, `"custom"`, or `"fail"`
+- `custom_theft_percentage` (number, optional): Only present when outcome is `"custom"`
 
 **Logic:**
 1. **Look up probabilities for each attacker-defender pairing**:
    - For each attacker, check `config.battle_outcome_matrix[day][attacker_id][primary_defender_id]`
+   - Also checks wildcard `"*"` entries: attacker default (`A -> "*"`) → defender default (`"*" -> D`) → heuristic
    - If found with both values: use configured `{full_success: prob, partial_success: prob}`
    - If found with only `full_success`: derive `partial_success = (1 - full_success) * 0.4`
+   - If `custom` is present: use `{full_success, partial_success, custom}` with optional `custom_theft_percentage`
    - If not found: use power-based heuristic fallback (see [model_generation.md](model_generation.md))
 
 2. **Combine probabilities for multiple attackers** (if > 1 attacker):
@@ -406,7 +424,8 @@ simulator = WarSimulator(alliances, event_schedule, model)
 4. Return outcome_level
 
 **Notes:**
-- fail probability is always implicit (1 - full - partial)
+- `fail` probability is always implicit (1 - full - partial - custom)
+- `custom` outcome uses `custom_theft_percentage` instead of the building-based formula
 - Random seed ensures reproducibility across runs with same config
 - See [model_generation.md](model_generation.md) for config format, heuristic formulas, and reference tables
 
@@ -419,14 +438,14 @@ simulator = WarSimulator(alliances, event_schedule, model)
 - `attackers`: List of attacking alliance data
 
 **Has from construction:**
-- `alliances`: Alliance data including `damage_weight` (optional per alliance)
+- `config.damage_weights`: Per-alliance damage weight overrides (optional, in model config)
 
 **Returns:**
 - `splits` (dict): attacker_id → fraction (sum = 1.0)
 
 **Logic:**
-1. Check if ALL attackers in this battle have `damage_weight` configured
-   - If yes: use `damage_weight` for each attacker
+1. Check if ALL attackers in this battle have a weight in `config.damage_weights`
+   - If yes: use configured weights
    - If no: use power-based heuristic fallback (see [model_generation.md](model_generation.md))
 2. Calculate total_weight = sum of all attacker weights
 3. Return `{attacker_id: weight / total_weight}` for each attacker
@@ -435,22 +454,20 @@ simulator = WarSimulator(alliances, event_schedule, model)
 - For single-attacker battles, this is trivially `{attacker_id: 1.0}`
 - The Battle Coordinator can skip calling this for single-attacker battles
 - Weights and power are never mixed — it's all-or-nothing on user-supplied weights
+- `damage_weights` lives in the model config, not on the alliance data
 - See [model_generation.md](model_generation.md) for heuristic formula and reference tables
 
 ### Model Implementations
 
-#### ConfigurableModel (Phase 1)
+#### ConfigurableModel
 Implements M1-M4 as described above:
 - Constructed with user config + alliance data
 - Each method checks user config first, falls back to heuristic
 - Uses random seed for reproducible outcome rolling
-
-#### StateDependentModel (Phase 2+)
-Extends ConfigurableModel with state-aware adjustments:
-- Adjust battle outcome probabilities based on how close an alliance is to a tier boundary
-- Vary targeting strategy based on current rankings
-- Factor in whether an alliance has been losing and might "try harder"
-- Could modify heuristic multipliers based on event history
+- Supports ESV and highest-spice targeting strategies with 4-level resolution
+- Supports wildcard `"*"` entries in outcome matrix
+- Supports `custom` outcome type with user-specified theft percentages
+- Supports Monte Carlo randomness: stochastic targeting (temperature), power fluctuation (noise), outcome probability noise
 
 ## Data Flow
 
@@ -491,18 +508,24 @@ Extends ConfigurableModel with state-aware adjustments:
 ## Module Organization
 
 ```
-src/
+src/spice_war/
 ├── game/
 │   ├── mechanics.py      # Components 1-4: Pure calculations
 │   ├── battle.py         # Component 5: Single battle resolution
 │   ├── events.py         # Components 6-7: Event coordination
-│   └── simulator.py      # Component 8: War simulator
+│   ├── simulator.py      # Components 8-9: Between-event + war simulator
+│   └── monte_carlo.py    # Monte Carlo simulation engine
 ├── models/
-│   ├── base.py           # BattleModel interface
-│   ├── configurable.py   # ConfigurableModel (Phase 1)
-│   └── state_aware.py    # StateDependentModel (Phase 2+)
-└── utils/
-    └── data_storage.py   # JSON I/O
+│   ├── base.py           # BattleModel abstract interface
+│   └── configurable.py   # ConfigurableModel with all targeting/outcome logic
+├── sheets/
+│   ├── importer.py       # CSV/Google Sheets → model config JSON
+│   └── template.py       # State file → CSV template generator
+├── utils/
+│   ├── data_structures.py # Alliance, EventConfig, GameState dataclasses
+│   └── validation.py     # JSON loading + input validation
+└── web/
+    └── bridge.py         # Dict-in/dict-out bridge for Pyodide web UI
 ```
 
 ## Testing Strategy
@@ -513,16 +536,26 @@ src/
 
 **Model components**: Test with synthetic game state
 - Verify model makes expected decisions given specific state
-- Example: "Given alliance is near tier boundary, verify higher aggression"
+- Example: "Given specific power ratios, verify ESV targeting picks optimal target"
 
 **Integration**: Test full simulation with known model + known initial state
 - Verify end-to-end results match expectations
 
-## Next Steps
+**Statistical fairness**: 1000-seed symmetric scenario verifies outcomes are unbiased
+- Within-faction spice CV < 2%, rank uniformity chi-squared p >= 0.001
 
-1. Define BattleModel interface in Python
-2. Implement game mechanics components (1-5)
-3. Implement event coordination (6-7) with model callbacks
-4. Implement war simulator (8)
-5. Implement ConfigurableModel (Phase 1 model)
-6. Integration testing with example scenario
+**Monte Carlo**: Verify tier distribution convergence and targeting matrix accuracy
+
+## Additional Components
+
+### Monte Carlo Engine
+Runs the war simulation N times with varying seeds (`base_seed + i`) to produce probability distributions. See `game/monte_carlo.py`.
+
+- `MonteCarloResult` tracks `tier_counts`, `spice_totals`, `per_iteration`, and `targeting_counts`
+- Derived methods: `tier_distribution()`, `spice_stats()`, `rank_summary()`, `most_likely_tier()`, `targeting_matrix()`
+
+### Web Interface
+Browser-based UI running entirely client-side via Pyodide (Python in WebAssembly). See [web_interface_design.md](web_interface_design.md).
+
+### CSV Pipeline
+Import/export model configs via CSV for Google Sheets workflow. See [cli_reference.md](cli_reference.md).

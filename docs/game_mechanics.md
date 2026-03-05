@@ -133,11 +133,19 @@ Number of side buildings depends on defender's spice total at bracket lock-in ti
   - Example: 3 attackers destroy all buildings (30% total), spice split based on each attacker's damage dealt
   - **Damage contribution modeling**: See [model_generation.md](model_generation.md) for how damage is calculated and distributed
 
+#### Battle Outcome Levels
+
+Each battle resolves to one of four outcome levels:
+- **full_success**: Attackers destroy all buildings + center (max theft)
+- **partial_success**: Attackers destroy side buildings only (no center)
+- **custom**: User-specified theft percentage (bypasses building formula). Only available via explicit model configuration.
+- **fail**: No buildings destroyed (0% theft)
+
 #### Battle Outcome Factors
 Battle success (which buildings get destroyed) depends on:
 - Relative power between attacker(s) and defender
 - Number of active participants
-- Specific battle mechanics (to be modeled with simplified heuristics)
+- Specific battle mechanics (modeled with simplified heuristics — see [model_generation.md](model_generation.md))
 
 ### Event Impact
 - Alliance spice totals change based on theft/defense
