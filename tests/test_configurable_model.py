@@ -59,31 +59,31 @@ class TestM3Heuristic:
         assert abs(probs["partial_success"] - 0.0) < 0.02
 
     def test_saturday_equal_power(self):
-        """Ratio 1.0 on Saturday → full≈0.20, partial≈0.15"""
+        """Ratio 1.0 on Saturday → full≈0.55, partial≈0.25"""
         a = _alliance("a1", power=15e9)
         d = _alliance("d1", "blue", power=15e9)
         model = ConfigurableModel({"random_seed": 0}, [a, d])
         probs = model._heuristic_probabilities(a, d, "saturday")
-        assert abs(probs["full_success"] - 0.20) < 0.01
-        assert abs(probs["partial_success"] - 0.15) < 0.01
+        assert abs(probs["full_success"] - 0.55) < 0.01
+        assert abs(probs["partial_success"] - 0.25) < 0.01
 
     def test_saturday_strong_attacker(self):
-        """Ratio 1.20 on Saturday → full≈0.55, partial≈0.18"""
+        """Ratio 1.20 on Saturday → full≈0.88, partial≈0.12"""
         a = _alliance("a1", power=18e9)
         d = _alliance("d1", "blue", power=15e9)
         model = ConfigurableModel({"random_seed": 0}, [a, d])
         probs = model._heuristic_probabilities(a, d, "saturday")
-        assert abs(probs["full_success"] - 0.55) < 0.01
-        assert abs(probs["partial_success"] - 0.18) < 0.01
+        assert abs(probs["full_success"] - 0.88) < 0.01
+        assert abs(probs["partial_success"] - 0.12) < 0.01
 
     def test_saturday_weak_attacker(self):
-        """Ratio 0.67 on Saturday → full≈0.0, partial≈0.0"""
+        """Ratio 0.67 on Saturday → full≈0.01, partial≈0.25"""
         a = _alliance("a1", power=10e9)
         d = _alliance("d1", "blue", power=15e9)
         model = ConfigurableModel({"random_seed": 0}, [a, d])
         probs = model._heuristic_probabilities(a, d, "saturday")
-        assert abs(probs["full_success"] - 0.0) < 0.02
-        assert abs(probs["partial_success"] - 0.0) < 0.02
+        assert abs(probs["full_success"] - 0.01) < 0.02
+        assert abs(probs["partial_success"] - 0.25) < 0.02
 
 
 class TestM3MatrixLookup:

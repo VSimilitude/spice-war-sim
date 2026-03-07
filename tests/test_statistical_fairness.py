@@ -30,7 +30,7 @@ OUTCOME_RATE_TOLERANCE = 0.05      # 5 percentage points
 # Expected heuristic outcome rates (power ratio 1.0)
 EXPECTED_RATES = {
     "wednesday": {"full_success": 0.40, "partial_success": 0.15, "fail": 0.45},
-    "saturday":  {"full_success": 0.20, "partial_success": 0.15, "fail": 0.65},
+    "saturday":  {"full_success": 0.55, "partial_success": 0.25, "fail": 0.20},
 }
 
 # ── Data Container ───────────────────────────────────────────────────────────

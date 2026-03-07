@@ -483,8 +483,8 @@ class ConfigurableModel(BattleModel):
             full = max(0.0, min(1.0, 1.35 * ratio - 0.95))
             cumulative_partial = max(0.0, min(1.0, 1.9 * ratio - 1.35))
         else:  # saturday
-            full = max(0.0, min(1.0, 1.75 * ratio - 1.55))
-            cumulative_partial = max(0.0, min(1.0, 1.9 * ratio - 1.55))
+            full = max(0.0, min(1.0, 1.65 * ratio - 1.10))
+            cumulative_partial = max(0.0, min(1.0, 1.65 * ratio - 0.85))
 
         partial = max(0.0, cumulative_partial - full)
         return {"full_success": full, "partial_success": partial}

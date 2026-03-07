@@ -246,8 +246,8 @@ def _heuristic_probabilities(self, attacker, defender, day):
         full = max(0.0, min(1.0, 1.35 * ratio - 0.95))
         cumulative_partial = max(0.0, min(1.0, 1.9 * ratio - 1.35))
     else:  # saturday
-        full = max(0.0, min(1.0, 1.75 * ratio - 1.55))
-        cumulative_partial = max(0.0, min(1.0, 1.9 * ratio - 1.55))
+        full = max(0.0, min(1.0, 1.65 * ratio - 1.10))
+        cumulative_partial = max(0.0, min(1.0, 1.65 * ratio - 0.85))
 
     partial = max(0.0, cumulative_partial - full)
     return {"full_success": full, "partial_success": partial}
@@ -261,18 +261,19 @@ def _heuristic_probabilities(self, attacker, defender, day):
 | 1.00  | 15B vs 15B    | 0.40        | 0.15        | 0.45 |
 | 0.67  | 10B vs 15B    | 0.00        | 0.00        | 1.00 |
 
-**Approximate behavior (Saturday — harder for attackers):**
+**Approximate behavior (Saturday):**
 | Ratio | Example       | full_success | partial_only | fail |
 |-------|---------------|-------------|-------------|------|
-| 1.20  | 18B vs 15B    | 0.55        | 0.18        | 0.27 |
-| 1.07  | 16B vs 15B    | 0.32        | 0.16        | 0.52 |
-| 1.00  | 15B vs 15B    | 0.20        | 0.15        | 0.65 |
-| 0.67  | 10B vs 15B    | 0.00        | 0.00        | 1.00 |
+| 1.20  | 18B vs 15B    | 0.88        | 0.12        | 0.00 |
+| 1.07  | 16B vs 15B    | 0.67        | 0.25        | 0.08 |
+| 1.00  | 15B vs 15B    | 0.55        | 0.25        | 0.20 |
+| 0.67  | 10B vs 15B    | 0.01        | 0.25        | 0.74 |
 
 **Notes:**
-- Slopes calibrated against S3 event 5 real-world outcomes (20 battles, Wednesday)
-- Saturday slopes derived proportionally (no real data yet)
-- Even matchups (ratio 1.0) fail ~45% on Wednesday, ~65% on Saturday
+- Wednesday slopes calibrated against S3 event 5 (20 battles)
+- Saturday slopes calibrated against S3 event 6 (19 battles)
+- Saturday is slightly more attacker-friendly than Wednesday in practice, possibly due to whale player impact outweighing overall power ratios
+- Even matchups (ratio 1.0) fail ~45% on Wednesday, ~20% on Saturday
 - Heuristic parameters can be tuned as more event data becomes available
 
 ### Handling Multiple Attackers
