@@ -1,0 +1,142 @@
+{
+  "random_seed": 42,
+  "event_targets": {
+    "1": {
+      "Ghst": "UTW",
+      "Hot": "RAG3",
+      "SPXP": "hAnA",
+      "fate": "DEED",
+      "NexA": "PPLE",
+      "VNSA": "hvm6",
+      "BGs": "SPir",
+      "DNEX": "GDZO",
+      "jOy": "VON",
+      "fabl": "TWAO",
+      "PxGv": "KAG3",
+      "KORK": "BdE",
+      "sWAT": "USA5",
+      "LEO1": "AR35",
+      "ktme": "VNFs",
+      "FRTG": "HULK",
+      "YYAN": "LATZ",
+      "SPXR": "Bo5S",
+      "SWEH": "ZFKs",
+      "MUDD": "DMUW"
+    }
+  },
+  "battle_outcome_matrix": {
+    "saturday": {
+      "Ghst": {
+        "UTW": {
+          "full_success": 1.0
+        }
+      },
+      "Hot": {
+        "RAG3": {
+          "full_success": 1.0
+        }
+      },
+      "SPXP": {
+        "hAnA": {
+          "full_success": 1.0
+        }
+      },
+      "fate": {
+        "DEED": {
+          "full_success": 1.0
+        }
+      },
+      "NexA": {
+        "PPLE": {
+          "full_success": 1.0
+        }
+      },
+      "VNSA": {
+        "hvm6": {
+          "full_success": 1.0
+        }
+      },
+      "BGs": {
+        "SPir": {
+          "full_success": 0.0,
+          "partial_success": 1.0
+        }
+      },
+      "DNEX": {
+        "GDZO": {
+          "full_success": 0.0,
+          "partial_success": 0.0,
+          "custom": 1.0,
+          "custom_theft_percentage": 15
+        }
+      },
+      "jOy": {
+        "VON": {
+          "full_success": 0.0,
+          "partial_success": 0.0
+        }
+      },
+      "fabl": {
+        "TWAO": {
+          "full_success": 0.0,
+          "partial_success": 0.0
+        }
+      },
+      "PxGv": {
+        "KAG3": {
+          "full_success": 1.0
+        }
+      },
+      "KORK": {
+        "BdE": {
+          "full_success": 1.0
+        }
+      },
+      "sWAT": {
+        "USA5": {
+          "full_success": 1.0
+        }
+      },
+      "LEO1": {
+        "AR35": {
+          "full_success": 1.0
+        }
+      },
+      "ktme": {
+        "VNFs": {
+          "full_success": 1.0
+        }
+      },
+      "FRTG": {
+        "HULK": {
+          "full_success": 1.0
+        }
+      },
+      "YYAN": {
+        "LATZ": {
+          "full_success": 1.0
+        }
+      },
+      "SPXR": {
+        "Bo5S": {
+          "full_success": 0.0,
+          "partial_success": 1.0
+        }
+      },
+      "SWEH": {
+        "ZFKs": {
+          "full_success": 0.0,
+          "partial_success": 1.0
+        }
+      },
+      "MUDD": {
+        "DMUW": {
+          "full_success": 0.0,
+          "partial_success": 0.0,
+          "custom": 1.0,
+          "custom_theft_percentage": 10
+        }
+      }
+    }
+  }
+}
