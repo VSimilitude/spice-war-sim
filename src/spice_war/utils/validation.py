@@ -24,9 +24,13 @@ _ALLOWED_MODEL_KEYS = {
     "targeting_temperature",
     "power_noise",
     "outcome_noise",
+    "tier_optimization_top_n",
+    "tier_optimization_fallback",
 }
 
-_VALID_STRATEGIES = {"expected_value", "highest_spice"}
+_VALID_STRATEGIES = {"expected_value", "highest_spice", "rank_aware", "maximize_tier"}
+
+_VALID_FALLBACK_STRATEGIES = {"expected_value", "highest_spice", "rank_aware"}
 
 
 class ValidationError(Exception):
@@ -346,6 +350,33 @@ def _check_model_references(
                 errors.append(f"'{key}' must be a number, got {type(val).__name__}")
             elif val < 0:
                 errors.append(f"'{key}' must be non-negative, got {val}")
+
+    # Check tier_optimization_* fields
+    top_n = data.get("tier_optimization_top_n")
+    fallback = data.get("tier_optimization_fallback")
+    strategy_for_tier = data.get("targeting_strategy", "expected_value")
+
+    if (top_n is not None or fallback is not None) \
+            and strategy_for_tier != "maximize_tier":
+        errors.append(
+            "'tier_optimization_top_n' and 'tier_optimization_fallback' "
+            "are only valid when targeting_strategy is 'maximize_tier', "
+            f"got targeting_strategy='{strategy_for_tier}'"
+        )
+
+    if top_n is not None:
+        if not isinstance(top_n, int) or isinstance(top_n, bool) or top_n <= 0:
+            errors.append(
+                "'tier_optimization_top_n' must be a positive integer, "
+                f"got {top_n!r}"
+            )
+
+    if fallback is not None:
+        if fallback not in _VALID_FALLBACK_STRATEGIES:
+            errors.append(
+                f"'tier_optimization_fallback' must be one of "
+                f"{sorted(_VALID_FALLBACK_STRATEGIES)}, got '{fallback}'"
+            )
 
     # Check for competing wildcards in battle_outcome_matrix
     for day, attackers in matrix.items():

@@ -6,7 +6,7 @@ from collections import Counter
 
 from spice_war.game.mechanics import calculate_building_count, calculate_theft_percentage
 from spice_war.models.base import BattleModel
-from spice_war.utils.data_structures import Alliance, GameState
+from spice_war.utils.data_structures import Alliance, EventConfig, GameState
 
 
 def heuristic_from_ratio(ratio: float, day: str) -> dict[str, float]:
@@ -108,24 +108,62 @@ class ConfigurableModel(BattleModel):
             else:
                 algo_attackers.append((attacker, resolved_strategy))
 
-        # Phase 2: Run algorithms for non-pinned attackers
+        # Phase 2: Split algo_attackers into priority + regular groups
         targets = dict(pins)
-        algo_attackers.sort(key=lambda pair: self._get_power(pair[0].alliance_id), reverse=True)
         assigned: set[str] = set(pins.values())
 
-        for attacker, strategy in algo_attackers:
+        priority_attackers: list[Alliance] = []
+        regular_attackers: list[tuple[Alliance, str]] = []
+
+        has_maximize_tier = any(
+            s == "maximize_tier" for _, s in algo_attackers
+        )
+
+        if has_maximize_tier:
+            attacking_faction = bracket_attackers[0].faction
+            top_n_ids = self._get_top_n_ids(state, attacking_faction)
+            fallback = self.config.get(
+                "tier_optimization_fallback", "rank_aware"
+            )
+            for attacker, strategy in algo_attackers:
+                if strategy == "maximize_tier" \
+                        and attacker.alliance_id in top_n_ids:
+                    priority_attackers.append(attacker)
+                else:
+                    effective = fallback if strategy == "maximize_tier" \
+                        else strategy
+                    regular_attackers.append((attacker, effective))
+        else:
+            regular_attackers = list(algo_attackers)
+
+        # Priority group picks first (forward sim, by power desc)
+        priority_attackers.sort(
+            key=lambda a: self._get_power(a.alliance_id), reverse=True
+        )
+        for attacker in priority_attackers:
             available = [
                 d for d in bracket_defenders
                 if d.alliance_id not in assigned
             ]
             if not available:
                 break
+            best = self._pick_maximize_tier_target(attacker, available, state)
+            targets[attacker.alliance_id] = best.alliance_id
+            assigned.add(best.alliance_id)
 
-            if strategy == "expected_value":
-                best = self._pick_esv_target(attacker, available, state)
-            else:
-                best = self._pick_highest_spice_target(available, state)
-
+        # Regular group picks next (by power desc)
+        regular_attackers.sort(
+            key=lambda pair: self._get_power(pair[0].alliance_id),
+            reverse=True,
+        )
+        for attacker, strategy in regular_attackers:
+            available = [
+                d for d in bracket_defenders
+                if d.alliance_id not in assigned
+            ]
+            if not available:
+                break
+            best = self._pick_by_strategy(attacker, available, state, strategy)
             targets[attacker.alliance_id] = best.alliance_id
             assigned.add(best.alliance_id)
 
@@ -290,6 +328,168 @@ class ConfigurableModel(BattleModel):
             available,
             key=lambda d: state.current_spice[d.alliance_id],
         )
+
+    def _pick_by_strategy(
+        self,
+        attacker: Alliance,
+        available: list[Alliance],
+        state: GameState,
+        strategy: str,
+    ) -> Alliance:
+        if strategy == "expected_value":
+            return self._pick_esv_target(attacker, available, state)
+        elif strategy == "highest_spice":
+            return self._pick_highest_spice_target(available, state)
+        elif strategy == "rank_aware":
+            return self._pick_rank_aware_target(attacker, available, state)
+        else:
+            return self._pick_esv_target(attacker, available, state)
+
+    @staticmethod
+    def _rank_and_tier(
+        alliance_id: str, spice_dict: dict[str, int]
+    ) -> tuple[int, int]:
+        sorted_ids = sorted(
+            spice_dict.keys(),
+            key=lambda aid: (-spice_dict[aid], aid),
+        )
+        rank = sorted_ids.index(alliance_id) + 1
+        if rank == 1:
+            tier = 1
+        elif rank <= 3:
+            tier = 2
+        elif rank <= 10:
+            tier = 3
+        elif rank <= 20:
+            tier = 4
+        else:
+            tier = 5
+        return rank, tier
+
+    def _pick_rank_aware_target(
+        self,
+        attacker: Alliance,
+        available: list[Alliance],
+        state: GameState,
+    ) -> Alliance:
+        cur_rank, cur_tier = self._rank_and_tier(
+            attacker.alliance_id, state.current_spice
+        )
+
+        scores: dict[str, int] = {}
+        esvs: dict[str, float] = {}
+
+        for d in available:
+            esv = self._calculate_esv(attacker, d, state)
+            esvs[d.alliance_id] = esv
+            transfer = round(esv)
+
+            projected = dict(state.current_spice)
+            projected[attacker.alliance_id] += transfer
+            projected[d.alliance_id] -= transfer
+
+            proj_rank, proj_tier = self._rank_and_tier(
+                attacker.alliance_id, projected
+            )
+
+            tier_improvement = cur_tier - proj_tier
+            rank_improvement = cur_rank - proj_rank
+            scores[d.alliance_id] = tier_improvement * 1000 + rank_improvement
+
+        if self.targeting_temperature > 0:
+            return self._softmax_select(available, scores)
+
+        return sorted(
+            available,
+            key=lambda d: (
+                -scores[d.alliance_id],
+                -esvs[d.alliance_id],
+                -state.current_spice[d.alliance_id],
+                d.alliance_id,
+            ),
+        )[0]
+
+    def _get_top_n_ids(
+        self,
+        state: GameState,
+        attacking_faction: str,
+    ) -> set[str]:
+        n = self.config.get("tier_optimization_top_n", 5)
+        faction_alliances = [
+            a for a in state.alliances if a.faction == attacking_faction
+        ]
+        sorted_by_spice = sorted(
+            faction_alliances,
+            key=lambda a: (-state.current_spice[a.alliance_id], a.alliance_id),
+        )
+        return {a.alliance_id for a in sorted_by_spice[:n]}
+
+    def _forward_sim_tier(
+        self,
+        attacker_id: str,
+        defender_id: str,
+        state: GameState,
+    ) -> tuple[int, int]:
+        from spice_war.game.simulator import simulate_war
+
+        synthetic = [
+            Alliance(
+                alliance_id=a.alliance_id,
+                faction=a.faction,
+                power=a.power,
+                starting_spice=state.current_spice[a.alliance_id],
+                daily_spice_rate=a.daily_spice_rate,
+                name=a.name,
+                server=a.server,
+            )
+            for a in state.alliances
+        ]
+
+        current_ec = state.event_schedule[state.event_number - 1]
+        forward_schedule = [
+            EventConfig(
+                attacker_faction=current_ec.attacker_faction,
+                day=current_ec.day,
+                days_before=0,
+            )
+        ] + list(state.event_schedule[state.event_number:])
+
+        forward_config = {
+            "random_seed": 0,
+            "targeting_strategy": "rank_aware",
+            "targeting_temperature": 0,
+            "power_noise": 0,
+            "outcome_noise": 0,
+            "battle_outcome_matrix": self.config.get("battle_outcome_matrix", {}),
+            "damage_weights": self.config.get("damage_weights", {}),
+            "event_targets": {"1": {attacker_id: defender_id}},
+        }
+
+        forward_model = ConfigurableModel(forward_config, synthetic)
+        result = simulate_war(synthetic, forward_schedule, forward_model)
+
+        tier = result["rankings"][attacker_id]
+        rank = self._rank_and_tier(attacker_id, result["final_spice"])[0]
+        return tier, rank
+
+    def _pick_maximize_tier_target(
+        self,
+        attacker: Alliance,
+        available: list[Alliance],
+        state: GameState,
+    ) -> Alliance:
+        candidates = []
+        for d in available:
+            tier, rank = self._forward_sim_tier(
+                attacker.alliance_id, d.alliance_id, state
+            )
+            esv = self._calculate_esv(attacker, d, state)
+            candidates.append((d, tier, rank, esv))
+
+        candidates.sort(
+            key=lambda x: (x[1], x[2], -x[3], x[0].alliance_id)
+        )
+        return candidates[0][0]
 
     # ── M2: Reinforcements ─────────────────────────────────────────
 

@@ -40,6 +40,7 @@ def simulate_war(
             day=event_config.day,
             event_history=event_history,
             alliances=alliances,
+            event_schedule=event_schedule,
         )
 
         if hasattr(model, "set_effective_powers"):

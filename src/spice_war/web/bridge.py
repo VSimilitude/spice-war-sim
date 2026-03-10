@@ -21,6 +21,8 @@ _ALLOWED_MODEL_KEYS = {
     "targeting_temperature",
     "power_noise",
     "outcome_noise",
+    "tier_optimization_top_n",
+    "tier_optimization_fallback",
 }
 
 

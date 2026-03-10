@@ -30,3 +30,4 @@ class GameState:
     day: str
     event_history: list[dict]
     alliances: list[Alliance]
+    event_schedule: list[EventConfig] | None = None
