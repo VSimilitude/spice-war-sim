@@ -1,0 +1,18 @@
+{
+  "random_seed": 42,
+  "targeting_strategy": "expected_value",
+  "event_targets": {
+    "1": {
+      "Ghst": "VON",
+      "Hot": "UTW",
+      "KORK": "TWAO",
+      "SPXP": "RAG3",
+      "jOy": "hAnA",
+      "VNSA": "DEED",
+      "BGs": "PPLE",
+      "NexA": "GDZO",
+      "PxGv": "ZFKs",
+      "fate": "SPir"
+    }
+  }
+}
