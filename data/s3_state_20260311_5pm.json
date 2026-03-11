@@ -1,0 +1,425 @@
+{
+  "alliances": [
+    {
+      "alliance_id": "Ghst",
+      "faction": "Scarlet Legion",
+      "power": 18304755237,
+      "starting_spice": 8313808,
+      "daily_rate": 157799,
+      "name": "GhostSquad",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "Hot",
+      "faction": "Scarlet Legion",
+      "power": 15509667992,
+      "starting_spice": 7038088,
+      "daily_rate": 146477,
+      "name": "Hot",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "SPXP",
+      "faction": "Scarlet Legion",
+      "power": 16562165406,
+      "starting_spice": 7003735,
+      "daily_rate": 154614,
+      "name": "Sul Phoenix Prime",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "VNSA",
+      "faction": "Scarlet Legion",
+      "power": 11707788035,
+      "starting_spice": 6517344,
+      "daily_rate": 133615,
+      "name": "VictoryAndStayAllied",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "BGs",
+      "faction": "Scarlet Legion",
+      "power": 11849958414,
+      "starting_spice": 6427676,
+      "daily_rate": 136512,
+      "name": "Beginnerwarriors",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "KORK",
+      "faction": "Scarlet Legion",
+      "power": 14076516849,
+      "starting_spice": 6348250,
+      "daily_rate": 139754,
+      "name": "KOR킹덤",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "NexA",
+      "faction": "Scarlet Legion",
+      "power": 16757937967,
+      "starting_spice": 6338938,
+      "daily_rate": 143222,
+      "name": "Next Age",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "fate",
+      "faction": "Scarlet Legion",
+      "power": 13861525348,
+      "starting_spice": 6334199,
+      "daily_rate": 119082,
+      "name": "fate united",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "jOy",
+      "faction": "Scarlet Legion",
+      "power": 14603203224,
+      "starting_spice": 6027014,
+      "daily_rate": 134464,
+      "name": "Journey Of Yay",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "PxGv",
+      "faction": "Scarlet Legion",
+      "power": 10712442643,
+      "starting_spice": 5719486,
+      "daily_rate": 130000,
+      "name": "たぬ森",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "DNEX",
+      "faction": "Scarlet Legion",
+      "power": 11824278763,
+      "starting_spice": 5415639,
+      "daily_rate": 131172,
+      "name": "Dream Nexus",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "YYAN",
+      "faction": "Scarlet Legion",
+      "power": 12008557793,
+      "starting_spice": 5263031,
+      "daily_rate": 130000,
+      "name": "Ying Yang",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "sWAT",
+      "faction": "Scarlet Legion",
+      "power": 12856038089,
+      "starting_spice": 5149263,
+      "daily_rate": 121722,
+      "name": "LandOfMisfits",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "LEO1",
+      "faction": "Scarlet Legion",
+      "power": 13696552623,
+      "starting_spice": 4961688,
+      "daily_rate": 113651,
+      "name": "Lion Empire Order",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "ktme",
+      "faction": "Scarlet Legion",
+      "power": 9921270354,
+      "starting_spice": 4824555,
+      "daily_rate": 130000,
+      "name": "killtime",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "FRTG",
+      "faction": "Scarlet Legion",
+      "power": 12105090104,
+      "starting_spice": 4797599,
+      "daily_rate": 130000,
+      "name": "FRTG is in the house",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "fabl",
+      "faction": "Scarlet Legion",
+      "power": 12084632146,
+      "starting_spice": 4671409,
+      "daily_rate": 107416,
+      "name": "TEAM仕事人",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "SWEH",
+      "faction": "Scarlet Legion",
+      "power": 7757184703,
+      "starting_spice": 4634792,
+      "daily_rate": 130000,
+      "name": "Sweet Home",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "ICGO",
+      "faction": "Scarlet Legion",
+      "power": 9862550440,
+      "starting_spice": 4611062,
+      "daily_rate": 133863,
+      "name": "いちご",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "1CES",
+      "faction": "Scarlet Legion",
+      "power": 12846831524,
+      "starting_spice": 4600768,
+      "daily_rate": 123814,
+      "name": "ICEBERG ALLIANCE",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "SPXR",
+      "faction": "Scarlet Legion",
+      "power": 12597390606,
+      "starting_spice": 4280557,
+      "daily_rate": 111308,
+      "name": "Sul Phoenix Rising",
+      "server": "Warzone #1387"
+    },
+    {
+      "alliance_id": "LoFi",
+      "faction": "Scarlet Legion",
+      "power": 9267253950,
+      "starting_spice": 4259938,
+      "daily_rate": 123974,
+      "name": "LoFi Land",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "HOpE",
+      "faction": "Scarlet Legion",
+      "power": 8661455980,
+      "starting_spice": 4200878,
+      "daily_rate": 115968,
+      "name": "HeartOfPeaceEnergy",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "MY81",
+      "faction": "Scarlet Legion",
+      "power": 6842480858,
+      "starting_spice": 4175849,
+      "daily_rate": 108761,
+      "name": "VNTG",
+      "server": "Warzone #1389"
+    },
+    {
+      "alliance_id": "STrH",
+      "faction": "Scarlet Legion",
+      "power": 9645958335,
+      "starting_spice": 4153380,
+      "daily_rate": 111803,
+      "name": "STAR HAVEN",
+      "server": "Warzone #1390"
+    },
+    {
+      "alliance_id": "MUDD",
+      "faction": "Scarlet Legion",
+      "power": 7739968188,
+      "starting_spice": 3987865,
+      "daily_rate": 130000,
+      "name": "Bayou Mudwrestlers",
+      "server": "Warzone #1386"
+    },
+    {
+      "alliance_id": "VON",
+      "faction": "Golden Tribe",
+      "power": 19075548647,
+      "starting_spice": 4581353,
+      "daily_rate": 148953,
+      "name": "Chosen",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "TWAO",
+      "faction": "Golden Tribe",
+      "power": 15025271013,
+      "starting_spice": 3898125,
+      "daily_rate": 152739,
+      "name": "TOGETHER WE ARE ONE",
+      "server": "Warzone #1412"
+    },
+    {
+      "alliance_id": "UTW",
+      "faction": "Golden Tribe",
+      "power": 17711900592,
+      "starting_spice": 3319983,
+      "daily_rate": 149661,
+      "name": "UTW",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "RAG3",
+      "faction": "Golden Tribe",
+      "power": 17034821954,
+      "starting_spice": 3253527,
+      "daily_rate": 166290,
+      "name": "Raging Legion",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "GDZO",
+      "faction": "Golden Tribe",
+      "power": 15541988443,
+      "starting_spice": 3155234,
+      "daily_rate": 151288,
+      "name": "GodZofOlympuS",
+      "server": "Warzone #1401"
+    },
+    {
+      "alliance_id": "hAnA",
+      "faction": "Golden Tribe",
+      "power": 11089698546,
+      "starting_spice": 2979818,
+      "daily_rate": 129140,
+      "name": "Happy and New age",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "SPir",
+      "faction": "Golden Tribe",
+      "power": 9955939718,
+      "starting_spice": 2937298,
+      "daily_rate": 126027,
+      "name": "The Shrimp pirates",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "DEED",
+      "faction": "Golden Tribe",
+      "power": 13589238775,
+      "starting_spice": 2898387,
+      "daily_rate": 150652,
+      "name": "NICE",
+      "server": "Warzone #1401"
+    },
+    {
+      "alliance_id": "PPLE",
+      "faction": "Golden Tribe",
+      "power": 14584581500,
+      "starting_spice": 2807223,
+      "daily_rate": 132784,
+      "name": "Pukkas People",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "BdE",
+      "faction": "Golden Tribe",
+      "power": 13431477273,
+      "starting_spice": 2438641,
+      "daily_rate": 114139,
+      "name": "Big Dig Energy",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "ZFKs",
+      "faction": "Golden Tribe",
+      "power": 11696793473,
+      "starting_spice": 2354354,
+      "daily_rate": 112865,
+      "name": "The Unbroken",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "DMUW",
+      "faction": "Golden Tribe",
+      "power": 9550866798,
+      "starting_spice": 2272327,
+      "daily_rate": 119764,
+      "name": "天命戰鬥士",
+      "server": "Warzone #1412"
+    },
+    {
+      "alliance_id": "hvm6",
+      "faction": "Golden Tribe",
+      "power": 10273632363,
+      "starting_spice": 2263057,
+      "daily_rate": 113289,
+      "name": "heavymetal666",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "Bo5S",
+      "faction": "Golden Tribe",
+      "power": 11083279867,
+      "starting_spice": 2242862,
+      "daily_rate": 119764,
+      "name": "BOSS UNITED",
+      "server": "Warzone #1412"
+    },
+    {
+      "alliance_id": "USA5",
+      "faction": "Golden Tribe",
+      "power": 11666656368,
+      "starting_spice": 2186530,
+      "daily_rate": 136712,
+      "name": "Americans United",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "VNFs",
+      "faction": "Golden Tribe",
+      "power": 10041951216,
+      "starting_spice": 2156032,
+      "daily_rate": 120153,
+      "name": "VN Fire Star",
+      "server": "Warzone #1412"
+    },
+    {
+      "alliance_id": "HULK",
+      "faction": "Golden Tribe",
+      "power": 10500670352,
+      "starting_spice": 2126284,
+      "daily_rate": 109291,
+      "name": "HeroicUnity LastKill",
+      "server": "Warzone #1395"
+    },
+    {
+      "alliance_id": "KAG3",
+      "faction": "Golden Tribe",
+      "power": 8415527016,
+      "starting_spice": 2063009,
+      "daily_rate": 105293,
+      "name": "Khaos legion",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "AR35",
+      "faction": "Golden Tribe",
+      "power": 12109016820,
+      "starting_spice": 1973714,
+      "daily_rate": 90575,
+      "name": "LEGION OF ARES",
+      "server": "Warzone #1397"
+    },
+    {
+      "alliance_id": "LATZ",
+      "faction": "Golden Tribe",
+      "power": 9790611718,
+      "starting_spice": 1899847,
+      "daily_rate": 112334,
+      "name": "Elite Origins",
+      "server": "Warzone #1401"
+    }
+  ],
+  "event_schedule": [
+    {
+      "attacker_faction": "Golden Tribe",
+      "day": "saturday",
+      "days_before": 3
+    }
+  ]
+}
