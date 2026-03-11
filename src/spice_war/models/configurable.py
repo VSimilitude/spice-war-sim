@@ -349,11 +349,13 @@ class ConfigurableModel(BattleModel):
     def _rank_and_tier(
         alliance_id: str, spice_dict: dict[str, int]
     ) -> tuple[int, int]:
-        sorted_ids = sorted(
-            spice_dict.keys(),
-            key=lambda aid: (-spice_dict[aid], aid),
-        )
-        rank = sorted_ids.index(alliance_id) + 1
+        my_spice = spice_dict[alliance_id]
+        rank = 1
+        for aid, spice in spice_dict.items():
+            if aid == alliance_id:
+                continue
+            if spice > my_spice or (spice == my_spice and aid < alliance_id):
+                rank += 1
         if rank == 1:
             tier = 1
         elif rank <= 3:
@@ -372,9 +374,9 @@ class ConfigurableModel(BattleModel):
         available: list[Alliance],
         state: GameState,
     ) -> Alliance:
-        cur_rank, cur_tier = self._rank_and_tier(
-            attacker.alliance_id, state.current_spice
-        )
+        spice = state.current_spice
+        aid = attacker.alliance_id
+        cur_rank, cur_tier = self._rank_and_tier(aid, spice)
 
         scores: dict[str, int] = {}
         esvs: dict[str, float] = {}
@@ -384,17 +386,21 @@ class ConfigurableModel(BattleModel):
             esvs[d.alliance_id] = esv
             transfer = round(esv)
 
-            projected = dict(state.current_spice)
-            projected[attacker.alliance_id] += transfer
-            projected[d.alliance_id] -= transfer
+            # Mutate in place and restore to avoid dict copy
+            did = d.alliance_id
+            orig_a = spice[aid]
+            orig_d = spice[did]
+            spice[aid] = orig_a + transfer
+            spice[did] = orig_d - transfer
 
-            proj_rank, proj_tier = self._rank_and_tier(
-                attacker.alliance_id, projected
-            )
+            proj_rank, proj_tier = self._rank_and_tier(aid, spice)
+
+            spice[aid] = orig_a
+            spice[did] = orig_d
 
             tier_improvement = cur_tier - proj_tier
             rank_improvement = cur_rank - proj_rank
-            scores[d.alliance_id] = tier_improvement * 1000 + rank_improvement
+            scores[did] = tier_improvement * 1000 + rank_improvement
 
         if self.targeting_temperature > 0:
             return self._softmax_select(available, scores)
@@ -404,7 +410,7 @@ class ConfigurableModel(BattleModel):
             key=lambda d: (
                 -scores[d.alliance_id],
                 -esvs[d.alliance_id],
-                -state.current_spice[d.alliance_id],
+                -spice[d.alliance_id],
                 d.alliance_id,
             ),
         )[0]

@@ -101,6 +101,12 @@
                     <label>Base seed: <input type="number" id="mc-base-seed" value="0" min="0"></label>
                     <button id="run-mc-btn" disabled>Run Monte Carlo</button>
                 </div>
+                <div id="mc-tier-warning" class="tier-warning hidden">
+                    <strong>Note:</strong> <code>maximize_tier</code> runs forward
+                    simulations for each targeting decision, which increases Monte Carlo
+                    run time significantly. Consider using <code>rank_aware</code> for
+                    faster results, or reducing iterations.
+                </div>
                 <div id="run-spinner" class="spinner hidden"></div>
             </section>
 

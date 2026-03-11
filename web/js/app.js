@@ -20,6 +20,34 @@ let spiceChartInstance = null;
 let formHandlersAttached = false;
 let resultFilter = "top10";
 
+// Stash for maximize_tier options — preserved when switching away from maximize_tier
+let _tierOptsStash = { top_n: 5, fallback: "rank_aware" };
+
+const STRATEGIES = [
+    { value: "expected_value", label: "expected_value" },
+    { value: "highest_spice", label: "highest_spice" },
+    { value: "rank_aware", label: "rank_aware" },
+    { value: "maximize_tier", label: "maximize_tier" },
+];
+
+function strategyOptions(selected, { includeDefault = false } = {}) {
+    let html = "";
+    if (includeDefault) {
+        html += `<option value="" ${selected === "" ? "selected" : ""}>(use global default)</option>`;
+    }
+    for (const s of STRATEGIES) {
+        html += `<option value="${s.value}" ${selected === s.value ? "selected" : ""}>${s.label}</option>`;
+    }
+    return html;
+}
+
+function fallbackStrategyOptions(selected) {
+    return STRATEGIES
+        .filter(s => s.value !== "maximize_tier")
+        .map(s => `<option value="${s.value}" ${selected === s.value ? "selected" : ""}>${s.label}</option>`)
+        .join("");
+}
+
 // --- Initialization ---
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -69,6 +97,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     validateState();
                 }
                 if (config.model) {
+                    if (config.model.tier_optimization_top_n != null) {
+                        _tierOptsStash.top_n = config.model.tier_optimization_top_n;
+                    }
+                    if (config.model.tier_optimization_fallback != null) {
+                        _tierOptsStash.fallback = config.model.tier_optimization_fallback;
+                    }
                     modelFormData = config.model;
                     document.getElementById("model-textarea").value = JSON.stringify(config.model, null, 2);
                     buildModelForm();
@@ -244,6 +278,9 @@ function buildGeneralSettings() {
     const targTemp = modelFormData.targeting_temperature ?? "";
     const powerNoise = modelFormData.power_noise ?? "";
     const outcomeNoise = modelFormData.outcome_noise ?? "";
+    const topN = modelFormData.tier_optimization_top_n ?? _tierOptsStash.top_n;
+    const fallback = modelFormData.tier_optimization_fallback ?? _tierOptsStash.fallback;
+    const showTierOpts = strategy === "maximize_tier";
 
     return `
     <details class="model-section key-section">
@@ -255,15 +292,33 @@ function buildGeneralSettings() {
             </label>
             <label>Global Targeting Strategy
                 <span class="help-text">Fallback algorithm when no explicit target is set.
-                    <strong>Expected Value</strong> maximizes expected spice stolen;
-                    <strong>Highest Spice</strong> targets the richest defender.</span>
+                    <strong>Expected Value</strong> maximizes expected spice stolen.
+                    <strong>Highest Spice</strong> targets the richest defender.
+                    <strong>Rank Aware</strong> optimizes for tier/rank improvement
+                    rather than raw spice. <strong>Maximize Tier</strong> runs forward
+                    simulations of the remaining war for the top N alliances to find the
+                    target yielding the best final tier.</span>
                 <select id="form-strategy" data-field="targeting_strategy">
-                    <option value="expected_value" ${strategy === "expected_value" ? "selected" : ""}>
-                        expected_value</option>
-                    <option value="highest_spice" ${strategy === "highest_spice" ? "selected" : ""}>
-                        highest_spice</option>
+                    ${strategyOptions(strategy)}
                 </select>
             </label>
+            <div id="maximize-tier-options" class="${showTierOpts ? "" : "hidden"}">
+                <p class="help-text"><strong>Top N</strong> alliances (by spice within
+                    the attacking faction) evaluate each candidate target by simulating
+                    the rest of the war. Alliances outside the top N use the
+                    <strong>fallback strategy</strong>. Higher N = more accurate but
+                    slower Monte Carlo runs.</p>
+                <label>Top N Alliances
+                    <input type="number" id="form-tier-top-n" value="${topN}"
+                           placeholder="5" min="1" step="1"
+                           data-field="tier_optimization_top_n">
+                </label>
+                <label>Fallback Strategy
+                    <select id="form-tier-fallback" data-field="tier_optimization_fallback">
+                        ${fallbackStrategyOptions(fallback)}
+                    </select>
+                </label>
+            </div>
             <div class="help-text noise-note">These three settings only affect
                 <strong>Monte Carlo</strong> runs. Set all to 0 for fully
                 deterministic results.</div>
@@ -301,11 +356,7 @@ function buildFactionTargeting(alliances) {
             <td>${esc(faction)}</td>
             <td>
                 <select data-field="faction_targeting_strategy" data-faction="${esc(faction)}">
-                    <option value="" ${val === "" ? "selected" : ""}>(use global default)</option>
-                    <option value="expected_value" ${val === "expected_value" ? "selected" : ""}>
-                        expected_value</option>
-                    <option value="highest_spice" ${val === "highest_spice" ? "selected" : ""}>
-                        highest_spice</option>
+                    ${strategyOptions(val, { includeDefault: true })}
                 </select>
             </td>
         </tr>`;
@@ -427,6 +478,9 @@ function buildEventTargets(alliances, events) {
             <p class="help-text">Within each algorithm, alliances choose targets
                 in descending power order. Ties break by higher spice, then
                 alphabetical ID.</p>
+            <p class="help-text">Available strategies at every level:
+                <code>expected_value</code>, <code>highest_spice</code>,
+                <code>rank_aware</code>, <code>maximize_tier</code>.</p>
         </details>
     </details>`;
 }
@@ -705,10 +759,7 @@ function wildcardDropdown(aids, selected, className) {
 function strategyDropdown(selected, className) {
     return `
     <select class="${className}">
-        <option value="expected_value" ${selected === "expected_value" ? "selected" : ""}>
-            expected_value</option>
-        <option value="highest_spice" ${selected === "highest_spice" ? "selected" : ""}>
-            highest_spice</option>
+        ${strategyOptions(selected)}
     </select>`;
 }
 
@@ -788,6 +839,13 @@ function attachFormHandlers() {
             const row = e.target.closest("tr");
             row.querySelector(".dt-pin-value").classList.toggle("hidden", e.target.value !== "pin");
             row.querySelector(".dt-strategy-value").classList.toggle("hidden", e.target.value === "pin");
+        }
+        // Show/hide maximize_tier options when global strategy changes
+        if (e.target.id === "form-strategy") {
+            const tierOpts = document.getElementById("maximize-tier-options");
+            if (tierOpts) {
+                tierOpts.classList.toggle("hidden", e.target.value !== "maximize_tier");
+            }
         }
         // Update heuristic placeholders when attacker/defender changes
         if (e.target.classList.contains("bom-attacker") || e.target.classList.contains("bom-defender")) {
@@ -908,6 +966,16 @@ function collectFormData() {
     const strategyVal = document.getElementById("form-strategy")?.value;
     if (strategyVal) {
         data.targeting_strategy = strategyVal;
+    }
+
+    // Tier optimization fields — always update stash, only emit when maximize_tier
+    const topNEl = document.getElementById("form-tier-top-n");
+    const fallbackEl = document.getElementById("form-tier-fallback");
+    if (topNEl?.value) _tierOptsStash.top_n = parseInt(topNEl.value, 10);
+    if (fallbackEl?.value) _tierOptsStash.fallback = fallbackEl.value;
+    if (data.targeting_strategy === "maximize_tier") {
+        data.tier_optimization_top_n = _tierOptsStash.top_n;
+        data.tier_optimization_fallback = _tierOptsStash.fallback;
     }
 
     // MC randomness parameters
@@ -1100,6 +1168,14 @@ function syncJsonToForm() {
     } catch {
         // If JSON is invalid, stay in JSON view and show error
         return false;
+    }
+
+    // Seed tier options stash from loaded JSON
+    if (parsed.tier_optimization_top_n != null) {
+        _tierOptsStash.top_n = parsed.tier_optimization_top_n;
+    }
+    if (parsed.tier_optimization_fallback != null) {
+        _tierOptsStash.fallback = parsed.tier_optimization_fallback;
     }
 
     modelFormData = parsed;
@@ -1419,11 +1495,23 @@ function renderEventDetail(event, allowed) {
 
 // --- Monte Carlo ---
 
+function hasMaximizeTier(modelDict) {
+    if (modelDict.targeting_strategy === "maximize_tier") return true;
+    const fts = modelDict.faction_targeting_strategy || {};
+    return Object.values(fts).includes("maximize_tier");
+}
+
 async function runMonteCarlo() {
     const stateDict = JSON.parse(document.getElementById("state-textarea").value);
     const modelDict = JSON.parse(document.getElementById("model-textarea").value);
     const iterations = parseInt(document.getElementById("mc-iterations").value, 10) || 1000;
     const baseSeed = parseInt(document.getElementById("mc-base-seed").value, 10) || 0;
+
+    // Show/hide performance warning for maximize_tier
+    const warningEl = document.getElementById("mc-tier-warning");
+    if (warningEl) {
+        warningEl.classList.toggle("hidden", !hasMaximizeTier(modelDict));
+    }
 
     setRunning(true);
     const result = await PyBridge.runMonteCarlo(stateDict, modelDict, iterations, baseSeed);

@@ -528,6 +528,41 @@ summary h3 {
     margin-top: 8px;
 }
 
+/* Tier optimization conditional fields */
+#maximize-tier-options {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 4px 0;
+}
+
+#maximize-tier-options label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+#maximize-tier-options select,
+#maximize-tier-options input[type="number"] {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* Performance warning for maximize_tier + MC */
+.tier-warning {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: #fff8e1;
+    border-left: 3px solid #e6a817;
+    font-size: 0.85em;
+    border-radius: 0 4px 4px 0;
+}
+
 /* Modal overlay */
 .modal-overlay {
     position: fixed;
